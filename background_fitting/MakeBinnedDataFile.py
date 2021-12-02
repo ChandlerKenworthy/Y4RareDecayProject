@@ -8,11 +8,11 @@ from utilities import Data, Consts
 
 # TODO: Merge these features into the Data object of utilities
 
-BINS = 400 # Number of bins to bin the data into
-NORMALISED = False # TODO: Add implementation to change this
+BINS = 100 # Number of bins to bin the data into
+NORMALISED = True # TODO: Add implementation to change this
 ROI = [4500, 6500] # The region of interest in mass (MeV)
 TYPE = 'real'
-FNAME = f'{BINS}bins_examplelabel'
+FNAME = f'{BINS}bins_{NORMALISED}'
 
 # Setting all constants required
 
@@ -44,8 +44,8 @@ errors = np.sqrt(frequencies)
 
 if NORMALISED:
     frequencies_normed, _ = np.histogram(masses, bin_space, density=True)
-    scaling_factor = np.mean(frequencies_normed/frequencies)
-    frequencies, errors = frequencies_normed, errors * scaling_factor
+    scaling_factor = np.mean(frequencies_normed[0]/frequencies[0])
+    frequencies, errors = frequencies_normed, (errors * scaling_factor)
 # Use numpy to bin the data using the bin space we calculated
 print('UPDATE: Data binned and errors on bins calculated')
 
