@@ -1,6 +1,6 @@
 import numpy as np
 
-def exponential(x, A, B, C, k):
+def exponential(x, A, k, B, C):
     """
     A simple exponential function with a shift of B and amplitude A
     """
