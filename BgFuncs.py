@@ -23,3 +23,15 @@ def logarithmic(x, A, B, C):
     A logarithm-like function of the form f(x)=-Bln((x-A)) + C
     """
     return -(B * np.log(x-A)) + C
+
+def quadratic(x, b, c, d):
+    """
+    A polynomial function of the form ax^3 + bx^2 + cx + d
+    """
+    return b*(x**2) + (c*x) + d
+
+def linear(x, a, b)
+    """
+    The most trivial of functions y = ax +b
+    """
+    return a*x + b
