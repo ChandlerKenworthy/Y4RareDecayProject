@@ -30,7 +30,7 @@ def quadratic(x, b, c, d):
     """
     return b*(x**2) + (c*x) + d
 
-def linear(x, a, b)
+def linear(x, a, b):
     """
     The most trivial of functions y = ax +b
     """
