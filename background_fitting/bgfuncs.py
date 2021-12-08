@@ -24,5 +24,6 @@ def cubic(m, a, b, c, d):
     """ Standard cubic """
     return a*(m**3) + b*(m**2) + (c*m) + d
     
-    
+def quartic(m, a, b, c, d, f):
+    return a*(m**4) + b*(m**3) + c*(m**2) + (d*m) + f
     
