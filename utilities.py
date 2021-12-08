@@ -422,24 +422,52 @@ class Plots:
     Make consistent and pretty plots based on lots of input data
     """
     
-    def __init__(self):
-        pass
-    
-    # do something
-    # TODO: Maybe take stuff from Modelbackground and put it in here?
-    
-    """
-    fig, ax = plt.subplots(4, 5, figsize=(45,40))
-    ftrs = np.array(all_cols).reshape((4, 5))
+    def __init__(self, data, figsize=(9,7), savefig=None):
+        """
+        Initialize the plots object
+        
+        Parameters
+        ----------
+        data : pd.DataFrame
+            A dataframe with the data to be plotted either 1D series for a histogram
+            or columns for x, y, xerr and yerr with these names.
+            
+        figsize : tuple
+            The size of the figure to render in inches (x, y)
+            
+        savefig : string
+            A path to the place where you want the figure to be saved. The filenames
+            will be automatically generated but you can specify the directory here.
+        """
+        self.data = data
+        self.figsize = figsize
+        self.savefig = savefig
+        
+    def bar(self, title, xlabel, ylabel):
+        """
+        Plot a standard vertical bar chart
+        """
+        import matplotlib.pyplot as plt
+        from datetime import datetime
 
-    for i in range(4):
-        for j in range(5):
-            ftr = ftrs[i,j]
-            print(ftr)
-            hist_items = ax[i][j].hist(g.get_group(1)[ftr], label='Signal', bins=100, histtype='bar', edgecolor='k', alpha=0.6, density=True)
-            ax[i][j].hist(g.get_group(0)[ftr], label='Background', bins=hist_items[1], histtype='bar', edgecolor='k', alpha=0.6, density=True)
-            ax[i][j].set_ylabel('Frequency')
-            ax[i][j].set_xlabel(ftr)
-            ax[i][j].legend()
-    plt.show()
-    """
+        now = datetime.now().time()
+        # Used to generate filenames based on the current time
+        
+        fig, ax = plt.subplots(1, 1, figsize=self.figsize)
+        
+        #ax.bar(d1[:,0], d1[:,1], width=bin_width, yerr=d1[:,2], label='Real Data', edgecolor='k', alpha=0.8)
+        #ax.bar(d2[:,0], d2[:,1], width=bin_width, yerr=d2[:,2], label='Simulated Data', edgecolor='k', alpha=0.8)
+        
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        
+        plt.legend(frameon=False)
+        plt.title(title)
+        if self.savefig is not None:
+            plt.savefig(f'{self.savefig}/bar_{now}.png', dpi=800)
+        plt.show()
+        return fig, ax
+    
+    
+    
+    
