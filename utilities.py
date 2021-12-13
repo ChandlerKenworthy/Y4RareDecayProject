@@ -132,7 +132,7 @@ class Data:
         
         return self.ncuts, self.nevents_lost
     
-    def apply_cut(self, indices):
+    def apply_cut(self, indices, verbose=False):
         """
         Apply a cut to the current data set. This will remove all events with an eventNumber
         in the indices array.
@@ -150,11 +150,12 @@ class Data:
         self.nevents_lost.append([initial_length - final_length, (initial_length-final_length)/initial_length])
         self.ncuts += 1
         
-        print('=====================\n')
-        print(f'Cut made!\nEvents Removed: {initial_length - final_length}')
-        print(f'Fractional Decrease in Events: {(initial_length-final_length)/initial_length}')
-        print(f'Percentage of All Events Left: {(final_length/self.first_length)*100:.3f}%')
-        print('\n=====================')
+        if verbose:
+            print('=====================\n')
+            print(f'Cut made!\nEvents Removed: {initial_length - final_length}')
+            print(f'Fractional Decrease in Events: {(initial_length-final_length)/initial_length}')
+            print(f'Percentage of All Events Left: {(final_length/self.first_length)*100:.3f}%')
+            print('\n=====================')
     
     def update_data(self, new_data, remove_na=True):
         """
@@ -338,7 +339,7 @@ class Cut:
             df = self.d.get_data().loc[~self.d.get_data()["totCandidates"].isin(n)]
         self.d.apply_cut(list(df.index))
         
-    def probnn_cut(self, particle, p, on, type='lt'):
+    def probnn_cut(self, particle, p, on, type='lt', verbose=False):
         """
         Make a cut based on a particles ProbNN variables. This will specifically cut
         on particle e.g. K with respect to on e.g. K_ProbNNp. It will cut around
@@ -377,7 +378,7 @@ class Cut:
         else:
             kill = df.loc[df[feature_of_interest] >= p]
         dropEvents = list(kill.index)
-        self.d.apply_cut(dropEvents)
+        self.d.apply_cut(dropEvents, verbose=verbose)
         
     def not_itself_probnn(self, particle, p):
         """
