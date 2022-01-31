@@ -37,14 +37,22 @@ def cball(m, A, b, u, loc):
     from scipy.stats import crystalball
     return A*crystalball.pdf(m, b, u, loc, 1)
 
-def double_crystal_ball(M, N, mu, s, a_low, a_high, n_low, n_high):
-    """
-    The double crystal ball function as defined in slide 16 of
-    https://www.physik.uzh.ch/dam/jcr:73d6fc85-f994-4efe-b483-31e385a1609f/Crivelli_2016.pdf
-    https://indico.in2p3.fr/event/11794/contributions/6962/attachments/5667/7069/Grevtsov_JJC15_v1.4.pdf
-    """
+def double_crystal_ball(x, A, mu, s, a_l, a_R, n_l, n_h):
+    t = (x-mu)/s
+    low = np.where(t <= a_l)[0]
+    mid = np.where(np.logical_and(t > a_l, t < a_R))[0]
+    high = np.where(t >= a_R)[0]
+    a_l, a_R = np.abs(a_l), np.abs(a_R)
+    l = ((n_l/a_l)**n_l)*np.exp(-0.5*(a_l**2))*(((n_l/a_l) - a_l - t[low])**(-n_l))
+    m = np.exp(-0.5*(t[mid]**2))
+    h = ((n_h/a_R)**n_h)*np.exp(-0.5*(a_R**2))
+    ###
+    x = a_R - t[high]
+    print(n_h)
+    h *= ((n_h/a_R) - [i**(-n_h) for i in x])
+    ###
     
-    return None
+    return A*np.concatenate((l, m ,h))
 
 
 
