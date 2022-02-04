@@ -418,57 +418,104 @@ class Cut:
         dropEvents = np.unique(dropEvents)
         self.d.apply_cut(dropEvents)
         
-class Plots:
+class Model:
     """
-    Make consistent and pretty plots based on lots of input data
+    An object which stores a collection of model functions which can easily be called
+    at any point
     """
     
-    def __init__(self, data, figsize=(9,7), savefig=None):
-        """
-        Initialize the plots object
-        
-        Parameters
-        ----------
-        data : pd.DataFrame
-            A dataframe with the data to be plotted either 1D series for a histogram
-            or columns for x, y, xerr and yerr with these names.
-            
-        figsize : tuple
-            The size of the figure to render in inches (x, y)
-            
-        savefig : string
-            A path to the place where you want the figure to be saved. The filenames
-            will be automatically generated but you can specify the directory here.
-        """
-        self.data = data
-        self.figsize = figsize
-        self.savefig = savefig
-        
-    def bar(self, title, xlabel, ylabel):
-        """
-        Plot a standard vertical bar chart
-        """
-        import matplotlib.pyplot as plt
-        from datetime import datetime
+    def __init__(self):
+        pass
+    
+    def exponential(m, a, b, c):
+        """ a*exp[-(bm+c)] """
+        import numpy as np
+        return a * np.exp(-(b*m + c))
 
-        now = datetime.now().time()
-        # Used to generate filenames based on the current time
+    def expsquare(m, a, b, c):
+        """ defm """
+        import numpy as np
+        return a*np.exp(-(m-b)**2)+c
+
+    def gaussian(m, mu, sigma):
+        """ Standard normal distribution """
+        import numpy as np
+        return (1/np.sqrt(2*np.pi*sigma**2))*np.exp(-((m-mu)**2)/(2*sigma**2))
+
+    def linear(m, a, b):
+        """ am + b """
+        return a*m + b
+
+    def quadratic(m, a, b, c):
+        """ am^2 + bm + c """
+        return a*(m**2) + (b*m) + c
+
+    def cubic(m, a, b, c, d):
+        """ Standard cubic """
+        return a*(m**3) + b*(m**2) + (c*m) + d
         
-        fig, ax = plt.subplots(1, 1, figsize=self.figsize)
+    def quartic(m, a, b, c, d, f):
+        return a*(m**4) + b*(m**3) + c*(m**2) + (d*m) + f
+    
+    def gaussian(m, A, mu, sigma):
+        """ Standard normal distribution """
+        import numpy as np
+        return A*(1/np.sqrt(2*np.pi*sigma**2))*np.exp(-((m-mu)**2)/(2*sigma**2))
+
+    def scaled_lorentzian(m, A, m_0, gamma):
+        import numpy as np
+        return (A/np.pi)*((0.5*gamma)/((m-m_0)**2 + (0.5*gamma)**2))
+
+    def breit_wigner(m, M, w, A):
+        """
+        The relativistic breit wigner distribution 
+        """
+        import numpy as np
+        gamma2 = np.sqrt((M**2)*((M**2) + (w**2))) 
+        # Array with length len(m)
+        k = (2*np.sqrt(2)*M*w*gamma2)/(np.pi*np.sqrt((M**2)*gamma2)) 
+        # Array with length len(m)
+        return A*k/((m**2 - M**2)**2 + (M*w)**2)
+
+    def voigt(m, alpha, gamma, shift):
+        """
+        The Voigt profile
+        """
+        import numpy as np
+        from scipy.special import wofz
+        sigma = alpha/np.sqrt(2*np.log(2))
+        return np.real(wofz(((m-shift) + 1j*gamma)/sigma/np.sqrt(2)))/sigma/np.sqrt(2*np.pi)
+
+    def cball(m, A, b, u, loc):
+        """
+        The scaled crystal ball function
+        """
+        from scipy.stats import crystalball
+        return A*crystalball.pdf(m, b, u, loc, 1)
+
+    def dscb(x, mu, sigma, alow, ahigh, nlow, nhigh):
+        # Works but needs some serious optimisation
+        # See https://arxiv.org/pdf/2011.07560.pdf
+        import numpy as np
+        z = (x - mu)/sigma
+        values = []
         
-        #ax.bar(d1[:,0], d1[:,1], width=bin_width, yerr=d1[:,2], label='Real Data', edgecolor='k', alpha=0.8)
-        #ax.bar(d2[:,0], d2[:,1], width=bin_width, yerr=d2[:,2], label='Simulated Data', edgecolor='k', alpha=0.8)
+        # Apply a specific function to the shifted values based on initial values
+        for v in z:
+            fx = 0
+            if v < -alow:
+                fx = np.exp(-0.5 * (alow**2)) * (((alow/nlow) * (nlow/alow - alow - v))**(-nlow))
+            elif v > ahigh:
+                fx = np.exp(-0.5 * (ahigh**2)) * (((ahigh/nhigh) * (nhigh/ahigh - ahigh + v))**(-nhigh))
+            else:
+                fx = np.exp(-0.5 * (v**2))
+            values.append(fx)
+        values = np.array(values)
+        x_gaps = np.array([x[i+1] - x[i] for i in range(0, len(x)-1)])
+        # The widths of each 'bin' that the function is being evaluated over
+        mean_values = np.array([np.mean([values[i], values[i+1]]) for i in range(len(values)-1)])
         
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+        N = 1/np.sum(np.multiply(x_gaps, mean_values))
+        #print(f'Scaling factor: {N}\nNormalised: {np.sum(N*values)}')
+        return N * values
         
-        plt.legend(frameon=False)
-        plt.title(title)
-        if self.savefig is not None:
-            plt.savefig(f'{self.savefig}/bar_{now}.png', dpi=800)
-        plt.show()
-        return fig, ax
-    
-    
-    
-    
