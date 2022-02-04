@@ -132,7 +132,7 @@ class Data:
         
         return self.ncuts, self.nevents_lost
     
-    def apply_cut(self, indices):
+    def apply_cut(self, indices, verbose=False):
         """
         Apply a cut to the current data set. This will remove all events with an eventNumber
         in the indices array.
@@ -150,11 +150,12 @@ class Data:
         self.nevents_lost.append([initial_length - final_length, (initial_length-final_length)/initial_length])
         self.ncuts += 1
         
-        print('=====================\n')
-        print(f'Cut made!\nEvents Removed: {initial_length - final_length}')
-        print(f'Fractional Decrease in Events: {(initial_length-final_length)/initial_length}')
-        print(f'Percentage of All Events Left: {(final_length/self.first_length)*100:.3f}%')
-        print('\n=====================')
+        if verbose:
+            print('=====================\n')
+            print(f'Cut made!\nEvents Removed: {initial_length - final_length}')
+            print(f'Fractional Decrease in Events: {(initial_length-final_length)/initial_length}')
+            print(f'Percentage of All Events Left: {(final_length/self.first_length)*100:.3f}%')
+            print('\n=====================')
     
     def update_data(self, new_data, remove_na=True):
         """
@@ -338,7 +339,7 @@ class Cut:
             df = self.d.get_data().loc[~self.d.get_data()["totCandidates"].isin(n)]
         self.d.apply_cut(list(df.index))
         
-    def probnn_cut(self, particle, p, on, type='lt'):
+    def probnn_cut(self, particle, p, on, type='lt', verbose=False):
         """
         Make a cut based on a particles ProbNN variables. This will specifically cut
         on particle e.g. K with respect to on e.g. K_ProbNNp. It will cut around
@@ -377,7 +378,7 @@ class Cut:
         else:
             kill = df.loc[df[feature_of_interest] >= p]
         dropEvents = list(kill.index)
-        self.d.apply_cut(dropEvents)
+        self.d.apply_cut(dropEvents, verbose=verbose)
         
     def not_itself_probnn(self, particle, p):
         """
@@ -417,29 +418,104 @@ class Cut:
         dropEvents = np.unique(dropEvents)
         self.d.apply_cut(dropEvents)
         
-class Plots:
+class Model:
     """
-    Make consistent and pretty plots based on lots of input data
+    An object which stores a collection of model functions which can easily be called
+    at any point
     """
     
     def __init__(self):
         pass
     
-    # do something
-    # TODO: Maybe take stuff from Modelbackground and put it in here?
-    
-    """
-    fig, ax = plt.subplots(4, 5, figsize=(45,40))
-    ftrs = np.array(all_cols).reshape((4, 5))
+    def exponential(m, a, b, c):
+        """ a*exp[-(bm+c)] """
+        import numpy as np
+        return a * np.exp(-(b*m + c))
 
-    for i in range(4):
-        for j in range(5):
-            ftr = ftrs[i,j]
-            print(ftr)
-            hist_items = ax[i][j].hist(g.get_group(1)[ftr], label='Signal', bins=100, histtype='bar', edgecolor='k', alpha=0.6, density=True)
-            ax[i][j].hist(g.get_group(0)[ftr], label='Background', bins=hist_items[1], histtype='bar', edgecolor='k', alpha=0.6, density=True)
-            ax[i][j].set_ylabel('Frequency')
-            ax[i][j].set_xlabel(ftr)
-            ax[i][j].legend()
-    plt.show()
-    """
+    def expsquare(m, a, b, c):
+        """ defm """
+        import numpy as np
+        return a*np.exp(-(m-b)**2)+c
+
+    def gaussian(m, mu, sigma):
+        """ Standard normal distribution """
+        import numpy as np
+        return (1/np.sqrt(2*np.pi*sigma**2))*np.exp(-((m-mu)**2)/(2*sigma**2))
+
+    def linear(m, a, b):
+        """ am + b """
+        return a*m + b
+
+    def quadratic(m, a, b, c):
+        """ am^2 + bm + c """
+        return a*(m**2) + (b*m) + c
+
+    def cubic(m, a, b, c, d):
+        """ Standard cubic """
+        return a*(m**3) + b*(m**2) + (c*m) + d
+        
+    def quartic(m, a, b, c, d, f):
+        return a*(m**4) + b*(m**3) + c*(m**2) + (d*m) + f
+    
+    def gaussian(m, A, mu, sigma):
+        """ Standard normal distribution """
+        import numpy as np
+        return A*(1/np.sqrt(2*np.pi*sigma**2))*np.exp(-((m-mu)**2)/(2*sigma**2))
+
+    def scaled_lorentzian(m, A, m_0, gamma):
+        import numpy as np
+        return (A/np.pi)*((0.5*gamma)/((m-m_0)**2 + (0.5*gamma)**2))
+
+    def breit_wigner(m, M, w, A):
+        """
+        The relativistic breit wigner distribution 
+        """
+        import numpy as np
+        gamma2 = np.sqrt((M**2)*((M**2) + (w**2))) 
+        # Array with length len(m)
+        k = (2*np.sqrt(2)*M*w*gamma2)/(np.pi*np.sqrt((M**2)*gamma2)) 
+        # Array with length len(m)
+        return A*k/((m**2 - M**2)**2 + (M*w)**2)
+
+    def voigt(m, alpha, gamma, shift):
+        """
+        The Voigt profile
+        """
+        import numpy as np
+        from scipy.special import wofz
+        sigma = alpha/np.sqrt(2*np.log(2))
+        return np.real(wofz(((m-shift) + 1j*gamma)/sigma/np.sqrt(2)))/sigma/np.sqrt(2*np.pi)
+
+    def cball(m, A, b, u, loc):
+        """
+        The scaled crystal ball function
+        """
+        from scipy.stats import crystalball
+        return A*crystalball.pdf(m, b, u, loc, 1)
+
+    def dscb(x, mu, sigma, alow, ahigh, nlow, nhigh):
+        # Works but needs some serious optimisation
+        # See https://arxiv.org/pdf/2011.07560.pdf
+        import numpy as np
+        z = (x - mu)/sigma
+        values = []
+        
+        # Apply a specific function to the shifted values based on initial values
+        for v in z:
+            fx = 0
+            if v < -alow:
+                fx = np.exp(-0.5 * (alow**2)) * (((alow/nlow) * (nlow/alow - alow - v))**(-nlow))
+            elif v > ahigh:
+                fx = np.exp(-0.5 * (ahigh**2)) * (((ahigh/nhigh) * (nhigh/ahigh - ahigh + v))**(-nhigh))
+            else:
+                fx = np.exp(-0.5 * (v**2))
+            values.append(fx)
+        values = np.array(values)
+        x_gaps = np.array([x[i+1] - x[i] for i in range(0, len(x)-1)])
+        # The widths of each 'bin' that the function is being evaluated over
+        mean_values = np.array([np.mean([values[i], values[i+1]]) for i in range(len(values)-1)])
+        
+        N = 1/np.sum(np.multiply(x_gaps, mean_values))
+        #print(f'Scaling factor: {N}\nNormalised: {np.sum(N*values)}')
+        return N * values
+        
