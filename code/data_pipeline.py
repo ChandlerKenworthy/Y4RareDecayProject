@@ -1,3 +1,4 @@
+from os import remove
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 sys.path.append('../')
 from utilities import Data, Consts
 
-def get_combined_data(features, random_shuffle=False, random_state=None):
+def get_combined_data(features, keep_only_events=False, random_shuffle=False, random_state=None, remove_na=True):
     """
     Fetch the simulated and real data tuples and combine them
     into a larger frame. Fetch the features requested. Can also perform
@@ -19,26 +20,49 @@ def get_combined_data(features, random_shuffle=False, random_state=None):
         A list of features to request from both the real and simulated 
         ROOT tuple data. eventNumber must not be used.
         
+    (dict) : keep_only_events
+        A dictionary with 2 keys 'real' and 'sim' whose associated values 
+        are lists of event numbers which are to be returned. I.e. all other
+        events are discarded, useful for applying pre-selections.
+        
     (bool) : random_shuffle
         Default = False. This will randomly shuffle these data. If this
         is true a random_state must be provided or left as None for a
         truly random shuffle. 
+        
+    (int) : random_state
+        An integer to be used for the random shuffling seed. If you do not
+        specify a random seed None is used to generate a random seed for
+        the random generator. 
+        
+    (bool) : remove_na
+        Whether to remove all events which do not have a complete feature set.
+        For some events they may have missing values in some feature columns.
+        Note having as True can cause conflict issues with keep_only_events.
     """
-    n_real, n_sim = 132974, 21717
     
     real = Data(*Consts().get_real_tuple())
     siml = Data(*Consts().get_simulated_tuple())
     
     print('Fetching features')
     print('[--------------------] 0% Complete', end='\r')
-    rf = real.fetch_features(features)
+    rf = real.fetch_features(features, remove_na=remove_na)
     print('[=================---] 86% Complete', end='\r')
-    sf = siml.fetch_features(features + ['Lb_BKGCAT'])
+    sf = siml.fetch_features(features + ['Lb_BKGCAT'], remove_na=remove_na)
     print('[====================] 100% Complete')
     
     sf['category'] = np.where(sf['Lb_BKGCAT'].isin([10,50]), 1, 2)
     sf.drop('Lb_BKGCAT', axis=1, inplace=True)
     rf['category'] = 0
+    
+    if keep_only_events != False:
+        print('Applying pre-selection event number cuts')
+        print(f'No. simulated events: {sf.shape[0]}\nNo. real events: {rf.shape[0]}')
+        # We need to apply a pre-selection
+        sf = sf.loc[keep_only_events['sim']]
+        rf = rf.loc[keep_only_events['real']]
+        print('Pre-selection criteria applied')
+        print(f'No. simulated events: {sf.shape[0]}\nNo. real events: {rf.shape[0]}')
     
     sf.reset_index(inplace=True)
     rf.reset_index(inplace=True)
@@ -221,3 +245,36 @@ def plot_history_curves(history, epochs):
     ax[2].legend()
     plt.legend(frameon=False)
     plt.show()
+    
+    
+def get_required_features(selection, df_prefix='df'):
+    required_features = []
+    b = False
+    e = False
+    begin, end = 0, 0
+    s = ''
+    
+    for i, char in enumerate(selection):
+        s += char
+        if char == ' ' and not b:
+            # Runs is b is False
+            s = s[:-1]
+            s += f"{df_prefix}['"
+            begin = i
+            b = True 
+            # We now have a begin position
+        elif char == ' ' and b:
+            # Only runs when we have a begin position
+            s = s[:-1]
+            s += "']"
+            end = i
+            # Determine end position
+            e = True
+            # We now have an ending position as well
+        if b and e:
+            # We have both a begin and end point
+            required_features.append(selection[begin+1:end])
+            b, e = False, False
+    # Remove all duplicates
+    required_features = list(dict.fromkeys(required_features))
+    return required_features, s

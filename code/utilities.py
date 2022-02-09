@@ -18,7 +18,7 @@ class Data:
         self.nevents_lost = [] # Number & % of events removed during each cut [[], [], []]
         self.first_length = 0 # The number of events before anything was applied
         
-    def fetch_features(self, features=None):
+    def fetch_features(self, features=None, remove_na=True):
         """
         A utility function to return a set of specific features. This is only to be used by the external
         for a quick return of features requested. Features should already be appropriately formatted.
@@ -33,7 +33,6 @@ class Data:
         df : pd.DataFrame
             A dataframe of all the features you care about
         """
-        
         import uproot as up
         fts = ["eventNumber"] + features
         with up.open(self.fName + self.suffix) as f:
@@ -42,8 +41,9 @@ class Data:
             df.set_index("eventNumber", inplace=True)
             df.columns = fts[1:]
             df = df[~df.index.duplicated(keep='first')]
+            # Remove duplicate events
         # Combine requested features with the current frame
-        self.update_data(df)
+        self.update_data(df, remove_na=remove_na)
         return df
     
     def get_data(self, particles=None, features=None):
