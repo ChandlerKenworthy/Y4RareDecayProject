@@ -43,8 +43,7 @@ def get_combined_data(features, keep_only_events=False, random_shuffle=False, ra
     
     real = Data(*Consts().get_real_tuple())
     siml = Data(*Consts().get_simulated_tuple())
-    
-    print('Fetching features')
+
     print('[--------------------] 0% Complete', end='\r')
     rf = real.fetch_features(features, remove_na=remove_na)
     print('[=================---] 86% Complete', end='\r')
