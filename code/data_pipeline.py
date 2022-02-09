@@ -1,3 +1,4 @@
+from os import remove
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -5,7 +6,73 @@ import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 sys.path.append('../')
-from utilities import Data
+from utilities import Data, Consts
+
+def get_combined_data(features, keep_only_events=False, random_shuffle=False, random_state=None, remove_na=True):
+    """
+    Fetch the simulated and real data tuples and combine them
+    into a larger frame. Fetch the features requested. Can also perform
+    a psuedo-random shuffling of these data.
+    
+    Parameters
+    ----------
+    (array) : features
+        A list of features to request from both the real and simulated 
+        ROOT tuple data. eventNumber must not be used.
+        
+    (dict) : keep_only_events
+        A dictionary with 2 keys 'real' and 'sim' whose associated values 
+        are lists of event numbers which are to be returned. I.e. all other
+        events are discarded, useful for applying pre-selections.
+        
+    (bool) : random_shuffle
+        Default = False. This will randomly shuffle these data. If this
+        is true a random_state must be provided or left as None for a
+        truly random shuffle. 
+        
+    (int) : random_state
+        An integer to be used for the random shuffling seed. If you do not
+        specify a random seed None is used to generate a random seed for
+        the random generator. 
+        
+    (bool) : remove_na
+        Whether to remove all events which do not have a complete feature set.
+        For some events they may have missing values in some feature columns.
+        Note having as True can cause conflict issues with keep_only_events.
+    """
+    
+    real = Data(*Consts().get_real_tuple())
+    siml = Data(*Consts().get_simulated_tuple())
+
+    print('[--------------------] 0% Complete', end='\r')
+    rf = real.fetch_features(features, remove_na=remove_na)
+    print('[=================---] 86% Complete', end='\r')
+    sf = siml.fetch_features(features + ['Lb_BKGCAT'], remove_na=remove_na)
+    print('[====================] 100% Complete')
+    
+    sf['category'] = np.where(sf['Lb_BKGCAT'].isin([10,50]), 1, 2)
+    sf.drop('Lb_BKGCAT', axis=1, inplace=True)
+    rf['category'] = 0
+    
+    if keep_only_events != False:
+        print('Applying pre-selection event number cuts')
+        print(f'No. simulated events: {sf.shape[0]}\nNo. real events: {rf.shape[0]}')
+        # We need to apply a pre-selection
+        sf = sf.loc[keep_only_events['sim']]
+        rf = rf.loc[keep_only_events['real']]
+        print('Pre-selection criteria applied')
+        print(f'No. simulated events: {sf.shape[0]}\nNo. real events: {rf.shape[0]}')
+    
+    sf.reset_index(inplace=True)
+    rf.reset_index(inplace=True)
+    
+    df = pd.concat([sf, rf], ignore_index=True, sort=False)
+    df.drop('eventNumber', inplace=True, axis=1)
+    
+    if random_shuffle:
+        df = shuffle(df, random_state=random_state)
+    print('Features requested successfully')
+    return df
 
 def normalise_df_features(df, cols=None, params=None):
     """
@@ -65,13 +132,31 @@ def prepare_data(features, train_frac=0.6, val_frac=0.2, test_frac=0.2, random_s
     pre-existing and this will simply carve up into sets for you. It must
     have a column called 'category' using 1 for sim. signal, 0 for real bg
     and 2 for siml background.
+    
+    Parameters
+    ----------
+    (df/array) : features
+        Either a list of features to normalise or a dataframe with features already
+        present which can all be normalised. 
+        
+    (float) : train_frac
+        The fraction of the total data sample to be used for training. Default = 0.6.
+        
+    (float) : val_frac
+        The fraction of the total data sample to be used for validation. Default = 0.2.
+        
+    (float) : test_frac
+        The fraction of the total data sample to be used for testing. Default = 0.2.
+        
+    (float) : random_state
+        The random seed to use when shuffling the data. 
     """
 
     if (train_frac + val_frac + test_frac) != 1.0:
         raise Exception('The data split fractions must sum to 1. Consider changing your frac arguments')
 
-    real = Data("../data/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Full.root", ":DTT1520me/DecayTree")
-    siml = Data("../data/job185-CombDVntuple-15314000-MC2016MD_100F-pKmue-MC.root", ":DTT1520me/DecayTree")
+    real = Data(*Consts().get_real_tuple())
+    siml = Data(*Consts().get_simulated_tuple())
     # Create data objects for the real and the simulated data
     if type(features) is pd.DataFrame:
         combined = features.copy()
@@ -135,18 +220,60 @@ def prepare_data(features, train_frac=0.6, val_frac=0.2, test_frac=0.2, random_s
     return (X_train_normalised, y_train), (X_val_normalised, y_val), (X_test_normalised, y_test)
 
 def plot_history_curves(history, epochs):
-    loss = history.history['loss']
-    val_loss = history.history['val_loss']
-    accuracy = history.history['binary_accuracy']
-    val_accuracy = history.history['val_binary_accuracy']
+    
+    if type(history) != dict:
+        history = history.history
+    
+    loss = history['loss']
+    val_loss = history['val_loss']
+    accuracy = history['binary_accuracy']
+    val_accuracy = history['val_binary_accuracy']
+    auc = history['auc']
+    val_auc = history['val_auc']
     epoch_range = range(1, epochs+1, 1)    
 
-    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
+    fig, ax = plt.subplots(1, 3, figsize=(22, 6))
     ax[0].plot(epoch_range, loss, 'r.', label='Training Loss')
     ax[0].plot(epoch_range, val_loss, 'b.', label='Validation Loss')
     ax[1].plot(epoch_range, accuracy, 'r.', label='Training Accuracy')
     ax[1].plot(epoch_range, val_accuracy, 'b.', label='Validation Accuracy')
+    ax[2].plot(epoch_range, auc, 'r.', label='Training AUC')
+    ax[2].plot(epoch_range, val_auc, 'b.', label='Validation AUC')
     ax[0].legend()
     ax[1].legend()
+    ax[2].legend()
     plt.legend(frameon=False)
     plt.show()
+    
+    
+def get_required_features(selection, df_prefix='df'):
+    required_features = []
+    b = False
+    e = False
+    begin, end = 0, 0
+    s = ''
+    
+    for i, char in enumerate(selection):
+        s += char
+        if char == ' ' and not b:
+            # Runs is b is False
+            s = s[:-1]
+            s += f"{df_prefix}['"
+            begin = i
+            b = True 
+            # We now have a begin position
+        elif char == ' ' and b:
+            # Only runs when we have a begin position
+            s = s[:-1]
+            s += "']"
+            end = i
+            # Determine end position
+            e = True
+            # We now have an ending position as well
+        if b and e:
+            # We have both a begin and end point
+            required_features.append(selection[begin+1:end])
+            b, e = False, False
+    # Remove all duplicates
+    required_features = list(dict.fromkeys(required_features))
+    return required_features, s
