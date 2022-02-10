@@ -36,6 +36,7 @@ class Data:
         import uproot as up
         fts = ["eventNumber"] + features
         with up.open(self.fName + self.suffix) as f:
+            print("OPENED")
             # Open the tuple using UpRoot
             df = f.arrays(fts, library="pd")
             df.set_index("eventNumber", inplace=True)
@@ -273,7 +274,7 @@ class Consts:
         self.sim_tuple_fName_old = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/100FilesCheck/job185-CombDVntuple-15314000-MC2016MD_100F-pKmue-MC.root"
         self.sim_tuple_suffix_old = ":DTT1520me/DecayTree"
         self.sim_tuple_fName = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
-        self.sim_tuple_suffix = ""
+        self.sim_tuple_suffix = ":DTT1520me/DecayTree"
     
     
 
