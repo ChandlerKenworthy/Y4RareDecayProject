@@ -1,7 +1,7 @@
 #
 # Package Name: DataFlow
 # Author: Chandler Kenworthy
-# Version: 0.1
+# Version: 1.1
 #
 
 class Flow:
@@ -63,6 +63,61 @@ class Flow:
         
         return common_features
     
+    
+    def generate_feature(self, new_feature_name, expression):
+        """
+        Generate a new feature derived from features parsed at initial time of creation of the
+        flow object.
+        
+        Parameters
+        ----------
+        new_feature_name : string
+            The name of the newly consturcted feature which should be assinged to the 
+            column name in the overarching dataframe
+        expression : string
+            An evaluable string used to generate the required feature. Must be in a Pythonic
+            and numpy friendly syntax
+        """
+        
+        import numpy as np
+        if self.combined is None:
+            print('WARN: No combined dataframe currently exists')
+            print('WARN: Automatically combining dataframes')
+            self.combine_data()
+        expression = self.add_preselection_df_prefix(expression, 'combined')[0]
+        print(f'Attempting to evaluate:\n{expression}')
+        self.combined[new_feature_name] = eval(expression)
+        print(f'{new_feature_name} calculated successfully')
+    
+    
+    def drop_features(self, features, target='all'):
+        """
+        Remove the requested features completely from the dataframe. Warning: this action
+        is permenant and cannot be undone! 
+        
+        Parameters
+        ----------
+        features : array_like
+            The list of features to remove from the dataframe.
+        target : string
+            The frame to target the feature dropping upon. Defaults to "all"
+            which removes features from the combined data. Other options are
+            "sim" or "real"
+        """
+        
+        if (self.sf is None) and (self.rf is None): 
+            print("WARN: Dataframes are empty, unable to drop features")
+            print("Try calling combine_data or apply_preselection first to avoid this error")
+        else:
+            if target == 'sim':
+                self.sf.drop(features, axis=1, inplace=True)
+                self.features = [f for f in self.features if f not in features]
+            elif target == 'real':
+                self.rf.drop(features, axis=1, inplace=True)
+                self.features = [f for f in self.features if f not in features]
+            else:
+                self.combined.drop(features, axis=1, inplace=True)
+
     
     def get_features(self, features, tuple):
         """
@@ -314,8 +369,12 @@ class Flow:
             A dataframe of the combined simulated and real event data.
         """
         
-        if self.combined == None:
-            self.combine_data()
+        try: 
+            if self.combined is None:
+                self.combine_data()
+        except ValueError:
+            # self.combined is a dataframe so boolean value cannot be evaluated
+            pass
         return self.combined
     
 
