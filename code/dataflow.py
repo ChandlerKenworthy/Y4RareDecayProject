@@ -7,7 +7,7 @@
 class Flow:
     # Description goes here
     
-    def __init__(self, features):
+    def __init__(self, features, sim_fname, real_fname):
         """
         Set up the flow object by pre-requesting all the features that
         will be needed as features when training the neural network.
@@ -27,8 +27,8 @@ class Flow:
         self.real_preselection_features = None
         self.sf = None
         self.rf = None
-        self.sim_fname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/100FilesCheck/job185-CombDVntuple-15314000-MC2016MD_100F-pKmue-MC.root"
-        self.real_fname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Full.root"
+        self.sim_fname = sim_fname
+        self.real_fname = real_fname
         self.sim_tree = ":DTT1520me/DecayTree"
         self.real_tree = ":DTT1520me/DecayTree"
         self.preselection_applied = False
@@ -53,7 +53,7 @@ class Flow:
         """
         
         import pandas as pd
-        common_features_list = pd.read_csv('code/neural_network/common_features.txt', sep=' ', index_col=None)['Feature'].to_list()
+        common_features_list = pd.read_csv('common_features.txt', sep=' ', index_col=None)['Feature'].to_list()
         # Read in the common features from the file
         common_features = [feature for feature in features if feature in common_features_list]
         
@@ -102,9 +102,23 @@ class Flow:
             df = f.arrays(fts, library="pd")
             df.set_index("eventNumber", inplace=True)
             df.columns = fts[1:]
-            df = df[~df.index.duplicated(keep='first')]
             # Remove duplicate events
         return df
+    
+    def get_simulated(self):
+        """
+        Get the simulated events in their own dataframe, includes eventNumber
+        """
+        
+        return self.sf
+    
+    
+    def get_real(self):
+        """
+        Get the real events in their own dataframe, includes eventNumber
+        """
+        
+        return self.rf
     
     
     def add_preselection_df_prefix(self, boolean_mask, prefix):
@@ -225,9 +239,10 @@ class Flow:
             
             self.sf = self.get_features(sim_features, 'sim')
             self.rf = self.get_features(real_features, 'real')
-            
+            # Get all the features that will be required 
             self.sf = self.sf[eval(self.simulated_preselection)]
             self.rf = self.rf[eval(self.real_preselection)]
+            # Evaluate the pre-selection criteria
         
         self.preselection_applied = True
         
@@ -250,11 +265,14 @@ class Flow:
             Whether events with any missing values should be removed
         """
         
+        # TODO: Remove columns that are not common to both datasets as different ones
+        # are pulled in when performing the pre-selection, currently reoves all BG
+        
         import numpy as np
         import pandas as pd
         from sklearn.utils import shuffle
         
-        if not self.preselection_applied or self.sf == None or self.rf == None:
+        if not self.preselection_applied or self.sf is None or self.rf is None:
             # We have no dataframes and no preselection has happened so data cant be combined
             print('WARN: The dataframes are empty or pre-selection has not been applied')
             print('WARN: Attempting empty preselection and recombination')
@@ -263,16 +281,25 @@ class Flow:
         self.sf['category'] = np.where(self.sf['Lb_BKGCAT'].isin([10,50]), 1, 0)
         self.sf.drop('Lb_BKGCAT', axis=1, inplace=True)
         self.rf['category'] = 0
+        
+        self.sf = self.sf[self.features + ['category']]
+        self.rf = self.rf[self.features + ['category']]
+        # Remove any columns that were used for pre-selection
+        
+        self.sf = self.sf[~self.sf.index.duplicated(keep='first')]
+        self.rf = self.rf[~self.rf.index.duplicated(keep='first')]
+        # Remove duplicate events
+        
         self.combined = pd.concat([self.sf, self.rf], ignore_index=True, sort=False)
-        self.combined.drop('eventNumber', inplace=True, axis=1)
         if random_shuffle:
             self.combined = shuffle(self.combined, random_state=random_state)
         if remove_na:
             has_missing = self.combined[self.combined.isna().any(axis=1)]
             cols_with_nans = has_missing.columns[has_missing.isna().any()].to_list()
-            print(f'INFO: Columns which had one or more NaN values:\n{cols_with_nans}')
+            if len(cols_with_nans) > 0:
+                print(f'INFO: Columns which had one or more NaN values:\n{cols_with_nans}')
             nan_events = self.combined.iloc[pd.isnull(self.combined).any(1).to_numpy().nonzero()[0]]['category'].to_list()
-            print(f'INFO: {nan_events.count(0)} background and {nan_events.count(1)} signal events were removed')
+            print(f'INFO: Removing events with missing values...\nINFO: {nan_events.count(0)} background and {nan_events.count(1)} signal events were removed')
             self.combined.dropna(inplace=True)
             
     
@@ -310,6 +337,40 @@ class Flow:
         
         return 0
 
+    def normalise_features(self, df, params=None):
+        """
+        Normalise features assuming a Gaussian distribution of said feature
+        for the requested dataframe. 
+
+        Parameters
+        ----------
+        df : dataframe
+            The dataframe to apply the normalisation on
+
+        params : array_like
+            Either False in which parameters for the normalisation are 
+            calculated or a tuple of Series objects with means and
+            standard deviations
+
+        Returns
+        -------
+        dataframe
+            A copy of the dataframe with the requested features normalised
+        """
+
+        df_copy = df.copy()
+        # Do not edit the original dataframe
+        
+        # Apply normalisation to all columns
+        if params is None:
+            df_copy = df_copy - df_copy.mean()
+            norm_df = df_copy / df_copy.std()
+        else:
+            norm_df = (df_copy - params[0])/params[1]
+        norm_df = norm_df.fillna(0)
+        # If the std of a column was zero before this is now full of NaNs, set back to equal zero
+
+        return norm_df
 
     def get_train_val_test_split(self, train=0.6, val=0.2, test=0.2, random_sate=0, normalise=True):
         """
@@ -343,10 +404,10 @@ class Flow:
 
         y = train_and_test['category']
         # The binary labels (classification problem) are assigned as the y column
-        X = train_and_test.drop(['category'], axis=1)
+        x = train_and_test.drop(['category'], axis=1)
         # Remove the category column from the training inputs
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=(train/(train+test)), test_size=1-(train/(train+test)), random_state=random_sate)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(train+test)), test_size=1-(train/(train+test)), random_state=random_sate)
         # Split the training and test data accordingly so that the input fractions are maintained relative
         # to the entire dataset
 
@@ -356,19 +417,9 @@ class Flow:
         if normalise:
             (X_train_means, X_train_stds) = X_train.mean(), X_train.std()
             # Find the means and standard deviations of every feature in the training data
-            
-            X_test = normalise_df_features(X_test, cols=X_train.columns, params=(X_train_means, X_train_stds))
-            X_val = normalise_df_features(X_val, cols=X_train.columns, params=(X_train_means, X_train_stds))
-            X_train = normalise_df_features(X_train)
+            X_test = self.normalise_features(X_test, params=(X_train_means, X_train_stds))
+            X_val = self.normalise_features(X_val, params=(X_train_means, X_train_stds))
+            X_train = self.normalise_features(X_train)
             # Normalise all the sets using the normalisation parameters found for the training data
 
         return (X_train, y_train), (X_val, y_val), (X_test, y_test)
-    
-
-particle_features = ['PX', 'PY', 'PZ', 'PT']
-particles = ['L1', 'p']
-feats = [particle + "_" + ft for ft in particle_features for particle in particles]
-test = Flow(feats)
-test.set_simulated_preselection("(((( Lb_M01_Subst0_p2K <1019.461-12)|( Lb_M01_Subst0_p2K >1019.461+12))&((((((243716.98437715+ p_P **2)**0.5+ K_PE + L2_PE )**2-( p_PX + K_PX + L2_PX )**2-( p_PY + K_PY + L2_PY )**2-( p_PZ + K_PZ + L2_PZ )**2)**0.5)>2000)&(((((243716.98437715+ p_P **2)**0.5+ K_PE + L1_PE )**2-( p_PX + K_PX + L1_PX )**2-( p_PY + K_PY + L1_PY )**2-( p_PZ + K_PZ + L1_PZ )**2)**0.5)>2000))&((((((((880354.49999197+ p_P **2)**0.5+(243716.98437715+ K_P **2)**0.5+(0.26112103+ L2_P **2)**0.5)**2-( p_PX + K_PX + L2_PX )**2-( p_PY + K_PY + L2_PY )**2-( p_PZ + K_PZ + L2_PZ )**2)**0.5)>2320)&((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0))))|((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))&(((((((880354.49999197+ p_P **2)**0.5+(243716.98437715+ K_P **2)**0.5+(11163.69140675+ L1_P **2)**0.5)**2-( p_PX + K_PX + L1_PX )**2-( p_PY + K_PY + L1_PY )**2-( p_PZ + K_PZ + L1_PZ )**2)**0.5)>2320)&((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))|((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0)))))&(( Lb_M23 >3178.05)|( Lb_M23 <3000))&((((((( K_PE +(19479.95517577+ L2_P **2)**0.5)**2-( K_PX + L2_PX )**2-( K_PY + L2_PY )**2-( K_PZ + L2_PZ )**2)**0.5)>1865+20)|(((( K_PE +(19479.95517577+ L2_P **2)**0.5)**2-( K_PX + L2_PX )**2-( K_PY + L2_PY )**2-( K_PZ + L2_PZ )**2)**0.5)<1865-20))&((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0))))|((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))&((((((((11163.69140675+ K_P **2)**0.5+ L1_PE )**2-( K_PX + L1_PX )**2-( K_PY + L1_PY )**2-( K_PZ + L1_PZ )**2)**0.5)>3097+35)|(((((11163.69140675+ K_P **2)**0.5+ L1_PE )**2-( K_PX + L1_PX )**2-( K_PY + L1_PY )**2-( K_PZ + L1_PZ )**2)**0.5)<3097-35))&((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))|((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0))))&((((((((243716.98437715+ p_P **2)**0.5+(19479.95517577+ L2_P **2)**0.5)**2-( p_PX + L2_PX )**2-( p_PY + L2_PY )**2-( p_PZ + L2_PZ )**2)**0.5)>1865+20)|(((((243716.98437715+ p_P **2)**0.5+(19479.95517577+ L2_P **2)**0.5)**2-( p_PX + L2_PX )**2-( p_PY + L2_PY )**2-( p_PZ + L2_PZ )**2)**0.5)<1865-20))&((( L2_ID >0)&( p_ID >0))|(( L2_ID <0)&( p_ID <0))))|((( L1_ID >0)&( p_ID >0))|(( L1_ID <0)&( p_ID <0))))&((( p_PX * L1_PX + p_PY * L1_PY + p_PZ * L1_PZ )/( p_P * L1_P )<np.cos(1e-3))&(( p_PX * L2_PX + p_PY * L2_PY + p_PZ * L2_PZ )/( p_P * L2_P )<np.cos(1e-3))&(( K_PX * L1_PX + K_PY * L1_PY + K_PZ * L1_PZ )/( K_P * L1_P )<np.cos(1e-3))&(( K_PX * L2_PX + K_PY * L2_PY + K_PZ * L2_PZ )/( K_P * L2_P )<np.cos(1e-3)))&(( p_PX * K_PX + p_PY * K_PY + p_PZ * K_PZ )/( p_P * K_P )<np.cos(1e-3)))&( L1_L0MuonDecision_TOS )&(( Lb_Hlt1TrackMVADecision_TOS )|( Lb_Hlt1TrackMuonDecision_TOS ))&( Lb_Hlt2Topo2BodyDecision_TOS | Lb_Hlt2Topo3BodyDecision_TOS | Lb_Hlt2Topo4BodyDecision_TOS | Lb_Hlt2TopoMu2BodyDecision_TOS | Lb_Hlt2TopoMu3BodyDecision_TOS | Lb_Hlt2TopoMu4BodyDecision_TOS )&(( LStar_M >1448)&( LStar_M <1591))&(( Lb_BKGCAT ==10)|( Lb_BKGCAT ==50)))")
-test.set_real_preselection("((( Lb_M01_Subst0_p2K <1019.461-12)|( Lb_M01_Subst0_p2K >1019.461+12))&((((((243716.98437715+ p_P **2)**0.5+ K_PE + L2_PE )**2-( p_PX + K_PX + L2_PX )**2-( p_PY + K_PY + L2_PY )**2-( p_PZ + K_PZ + L2_PZ )**2)**0.5)>2000)&(((((243716.98437715+ p_P **2)**0.5+ K_PE + L1_PE )**2-( p_PX + K_PX + L1_PX )**2-( p_PY + K_PY + L1_PY )**2-( p_PZ + K_PZ + L1_PZ )**2)**0.5)>2000))&((((((((880354.49999197+ p_P **2)**0.5+(243716.98437715+ K_P **2)**0.5+(0.26112103+ L2_P **2)**0.5)**2-( p_PX + K_PX + L2_PX )**2-( p_PY + K_PY + L2_PY )**2-( p_PZ + K_PZ + L2_PZ )**2)**0.5)>2320)&((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0))))|((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))&(((((((880354.49999197+ p_P **2)**0.5+(243716.98437715+ K_P **2)**0.5+(11163.69140675+ L1_P **2)**0.5)**2-( p_PX + K_PX + L1_PX )**2-( p_PY + K_PY + L1_PY )**2-( p_PZ + K_PZ + L1_PZ )**2)**0.5)>2320)&((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))|((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0)))))&(( Lb_M23 >3178.05)|( Lb_M23 <3000))&((((((( K_PE +(19479.95517577+ L2_P **2)**0.5)**2-( K_PX + L2_PX )**2-( K_PY + L2_PY )**2-( K_PZ + L2_PZ )**2)**0.5)>1865+20)|(((( K_PE +(19479.95517577+ L2_P **2)**0.5)**2-( K_PX + L2_PX )**2-( K_PY + L2_PY )**2-( K_PZ + L2_PZ )**2)**0.5)<1865-20))&((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0))))|((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))&((((((((11163.69140675+ K_P **2)**0.5+ L1_PE )**2-( K_PX + L1_PX )**2-( K_PY + L1_PY )**2-( K_PZ + L1_PZ )**2)**0.5)>3097+35)|(((((11163.69140675+ K_P **2)**0.5+ L1_PE )**2-( K_PX + L1_PX )**2-( K_PY + L1_PY )**2-( K_PZ + L1_PZ )**2)**0.5)<3097-35))&((( L1_ID <0)&( p_ID >0))|(( L1_ID >0)&( p_ID <0))))|((( L2_ID <0)&( p_ID >0))|(( L2_ID >0)&( p_ID <0))))&((((((((243716.98437715+ p_P **2)**0.5+(19479.95517577+ L2_P **2)**0.5)**2-( p_PX + L2_PX )**2-( p_PY + L2_PY )**2-( p_PZ + L2_PZ )**2)**0.5)>1865+20)|(((((243716.98437715+ p_P **2)**0.5+(19479.95517577+ L2_P **2)**0.5)**2-( p_PX + L2_PX )**2-( p_PY + L2_PY )**2-( p_PZ + L2_PZ )**2)**0.5)<1865-20))&((( L2_ID >0)&( p_ID >0))|(( L2_ID <0)&( p_ID <0))))|((( L1_ID >0)&( p_ID >0))|(( L1_ID <0)&( p_ID <0))))&((( p_PX * L1_PX + p_PY * L1_PY + p_PZ * L1_PZ )/( p_P * L1_P )<np.cos(1e-3))&(( p_PX * L2_PX + p_PY * L2_PY + p_PZ * L2_PZ )/( p_P * L2_P )<np.cos(1e-3))&(( K_PX * L1_PX + K_PY * L1_PY + K_PZ * L1_PZ )/( K_P * L1_P )<np.cos(1e-3))&(( K_PX * L2_PX + K_PY * L2_PY + K_PZ * L2_PZ )/( K_P * L2_P )<np.cos(1e-3)))&(( p_PX * K_PX + p_PY * K_PY + p_PZ * K_PZ )/( p_P * K_P )<np.cos(1e-3)))")
-test.apply_preselection()
