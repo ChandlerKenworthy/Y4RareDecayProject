@@ -1,6 +1,9 @@
 # Metadata from TensorFlow
 *.pb
 
+# Data files
+*.csv
+
 # Byte-compiled / optimized / DLL files
 *.py[cod]
 *$py.class
