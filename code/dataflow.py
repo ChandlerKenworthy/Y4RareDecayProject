@@ -1,13 +1,13 @@
 #
 # Package Name: DataFlow
 # Author: Chandler Kenworthy
-# Version: 1.1
+# Version: 1.3
 #
 
 class Flow:
     # Description goes here
     
-    def __init__(self, features, sim_fname, real_fname):
+    def __init__(self, features, sim_fname, real_fname, csv_path=None):
         """
         Set up the flow object by pre-requesting all the features that
         will be needed as features when training the neural network.
@@ -18,21 +18,26 @@ class Flow:
             A list of features that will be used to train the neural network
         """
         
-        self.features = self.check_common_features(features)
-        self.simulated_preselection = None
-        self.real_preselection = None
-        self.simulated_df_prefix = 'sf'
-        self.real_df_prefix = 'rf'
-        self.simulated_preselection_features = None
-        self.real_preselection_features = None
-        self.sf = None
-        self.rf = None
-        self.sim_fname = sim_fname
-        self.real_fname = real_fname
-        self.sim_tree = ":DTT1520me/DecayTree"
-        self.real_tree = ":DTT1520me/DecayTree"
-        self.preselection_applied = False
-        self.combined = None
+        if (csv_path is not None):
+            import pandas as pd
+            self.combined = pd.read_csv(csv_path, sep=" ", index_col='Index')
+            self.features = list(self.combined.columns)
+        else:
+            self.features = self.check_common_features(features)
+            self.simulated_preselection = None
+            self.real_preselection = None
+            self.simulated_df_prefix = 'sf'
+            self.real_df_prefix = 'rf'
+            self.simulated_preselection_features = None
+            self.real_preselection_features = None
+            self.sf = None
+            self.rf = None
+            self.sim_fname = sim_fname
+            self.real_fname = real_fname
+            self.sim_tree = ":DTT1520me/DecayTree"
+            self.real_tree = ":DTT1520me/DecayTree"
+            self.preselection_applied = False
+            self.combined = None
                     
     
     def check_common_features(self, features):
@@ -86,8 +91,29 @@ class Flow:
             self.combine_data()
         expression = self.add_preselection_df_prefix(expression, 'combined')[0]
         print(f'Attempting to evaluate:\n{expression}')
-        self.combined[new_feature_name] = eval(expression)
+        custom_series = eval(expression)
+        self.combined[new_feature_name] = custom_series
         print(f'{new_feature_name} calculated successfully')
+    
+    
+    def to_csv(self, fname):
+        """
+        Export the combined dataframe object to a CSV file for faster reading
+        in and out next time. This will output an index column and headers.
+        
+        Parameters
+        ----------
+        fname : String
+            The filepath and or filename that are to be used when writing
+            out the CSV
+        
+        TODO: Be able to instantiate a Flow object with a CSV file
+        """
+        
+        if (self.combined is None):
+            print('WARN: No data to output to CSV!')
+        else:
+            self.combined.to_csv(fname, sep=" ", index_label='Index', header=True, index=True)
     
     
     def drop_features(self, features, target='all'):
@@ -320,9 +346,6 @@ class Flow:
             Whether events with any missing values should be removed
         """
         
-        # TODO: Remove columns that are not common to both datasets as different ones
-        # are pulled in when performing the pre-selection, currently reoves all BG
-        
         import numpy as np
         import pandas as pd
         from sklearn.utils import shuffle
@@ -377,24 +400,30 @@ class Flow:
             pass
         return self.combined
     
-
-    def normalise_features(self, df, params):
+    
+    def set_event_ratio(self, ratio=1.0, random_state=0):
         """
-        Normalise all the columns of the given dataframe according to the parameters
-        passed in params.
+        Trim the data via the category to enforce a particular ratio of 
+        background to signal events. The default ratio is 0.1
         
         Parameters
         ----------
-        df : dataframe
-            A dataframe on which the normalisation will occur. This will not be
-            done inplace
-        params : tuple (list)
-            A tuple of lists with the first item the mean and second item the
-            standard deviation for each list. The length of the tuple must
-            match the number of columns in df
+        ratio : float
+            The fraction of signal to background events to be obtained in 
+            these data
         """
         
-        return 0
+        curr_bg = self.combined['category'].value_counts()[0]
+        curr_sg = self.combined['category'].value_counts()[1]
+        
+        if (self.combined is None):
+            self.combine_data()
+        
+        frac_bg_to_remove = 1 - ((curr_sg / ratio) / curr_bg)
+        
+        remove_idx = self.combined.query('category == 0').sample(frac=frac_bg_to_remove, random_state=random_state).index.to_list()
+        self.combined.drop(remove_idx, axis=0, inplace=True)
+    
 
     def normalise_features(self, df, params=None):
         """
@@ -431,7 +460,8 @@ class Flow:
 
         return norm_df
 
-    def get_train_val_test_split(self, train=0.6, val=0.2, test=0.2, random_sate=0, normalise=True):
+
+    def get_train_val_test_split(self, train=0.6, val=0.2, test=0.2, random_state=0, normalise=True):
         """
         Split the combined dataframe into a training, validation and test sample with
         the fractions specified. Apply a random shuffle if required. This will also
@@ -466,7 +496,7 @@ class Flow:
         x = train_and_test.drop(['category'], axis=1)
         # Remove the category column from the training inputs
 
-        X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(train+test)), test_size=1-(train/(train+test)), random_state=random_sate)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(train+test)), test_size=1-(train/(train+test)), random_state=random_state)
         # Split the training and test data accordingly so that the input fractions are maintained relative
         # to the entire dataset
 
