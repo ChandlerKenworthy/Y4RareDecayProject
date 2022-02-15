@@ -411,6 +411,8 @@ class Flow:
         ratio : float
             The fraction of signal to background events to be obtained in 
             these data
+        random_state : int
+            An integer seed for the random sampling algorithm
         """
         
         curr_bg = self.combined['category'].value_counts()[0]
