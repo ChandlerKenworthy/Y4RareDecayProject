@@ -141,7 +141,7 @@ class Flow:
             self.combined.drop(features, axis=1, inplace=True)
 
     
-    def get_features(self, features, tuple):
+    def get_features(self, features, tuple, remove_duplicate_events_seed=0):
         """
         Get the requested features from the given ROOT tuple. Automatically sets the eventNumber
         as the indexing column.
@@ -179,8 +179,24 @@ class Flow:
             df = f.arrays(fts, library="pd")
             df.set_index("eventNumber", inplace=True)
             df.columns = fts[1:]
-            # Remove duplicate events
+            df = df.sample(frac=1, random_state=remove_duplicate_events_seed)
+            # Randomly shuffle beforehand so the duplication happens 'randomly'
+            df = df[~df.index.duplicated(keep='first')]
+            # Remove duplicate events in a random but reproducible way
         return df
+    
+    
+    def restrict_sidebands(self, keep_regions):
+        """
+        Call in the masses for the corresponding events for simulated and 
+        background data and then restrict the mass bands to include in the
+        analysis. Internal use only.
+        """
+        
+        for region in keep_regions:
+            self.sf = self.sf[self.sf['Lb_M'].isin(region)]
+            self.rf = self.rf[self.rf['Lb_M'].isin(region)]
+
     
     def get_simulated(self):
         """
@@ -298,11 +314,17 @@ class Flow:
         self.real_preselection_features = pre_features
         
     
-    def apply_preselection(self):
+    def apply_preselection(self, keep_regions=False):
         """
         Apply the current unique preselection criteria to the corresponding datasets.
         This will trigger a call for all features initially specified and those needed
         to perform the preselection.
+        
+        Parameters
+        ----------
+        keep_regions : bool, array_like
+            A nested list of mass regions (lower, higher) inclusive to restrict the
+            events which are kept to. 
         """
 
         import numpy as np
@@ -314,12 +336,26 @@ class Flow:
             # Find all common features between those used for training and those needed for preselection
             # so we request as few features as possible and avoid duplicates
             
+            if keep_regions != False:
+                sim_features += ['Lb_M']
+                real_features += ['Lb_M']
+            
             self.sf = self.get_features(sim_features, 'sim')
             self.rf = self.get_features(real_features, 'real')
             # Get all the features that will be required 
+            
+            if keep_regions != False:
+                self.restrict_sidebands(keep_regions)
+                # Apply the mass restriction before pre-selection
+            
             self.sf = self.sf[eval(self.simulated_preselection)]
             self.rf = self.rf[eval(self.real_preselection)]
             # Evaluate the pre-selection criteria
+            
+            if keep_regions != False:
+                self.sf.drop('Lb_M', inplace=True, axis=1)
+                self.rf.drop('Lb_M', inplace=True, axis=1)
+                # Remove the Lb_M column as if nothing ever happened
         
         self.preselection_applied = True
         
