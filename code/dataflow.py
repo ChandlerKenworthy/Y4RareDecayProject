@@ -339,25 +339,23 @@ class Flow:
             # Find all common features between those used for training and those needed for preselection
             # so we request as few features as possible and avoid duplicates
             
-            if keep_regions != False:
+            
+            if (keep_regions != False) and ('Lb_M' not in real_features):
                 real_features += ['Lb_M']
             
             self.sf = self.get_features(sim_features, 'sim')
             self.rf = self.get_features(real_features, 'real')
             # Get all the features that will be required 
-            
+            print('SHAPE', self.sf.shape)
             if keep_regions != False:
                 self.restrict_sidebands(keep_regions)
+                self.rf.drop('Lb_M', inplace=True, axis=1)
                 # Apply the mass restriction before pre-selection
             
             self.sf = self.sf[eval(self.simulated_preselection)]
             self.rf = self.rf[eval(self.real_preselection)]
             # Evaluate the pre-selection criteria
-            
-            if keep_regions != False:
-                self.rf.drop('Lb_M', inplace=True, axis=1)
-                # Remove the Lb_M column as if nothing ever happened
-        
+            print('SHAPE', self.sf.shape)
         self.preselection_applied = True
         
     
@@ -396,7 +394,7 @@ class Flow:
         self.sf = self.sf[self.features + ['category']]
         self.rf = self.rf[self.features + ['category']]
         # Remove any columns that were used for pre-selection
-        print(self.sf['category'].value_counts())
+        
         #self.sf = self.sf[~self.sf.index.duplicated(keep='first')]
         #self.rf = self.rf[~self.rf.index.duplicated(keep='first')]
         # Remove duplicate events
@@ -447,8 +445,7 @@ class Flow:
         random_state : int
             An integer seed for the random sampling algorithm
         """
-        
-        print('HELLO FROGS\n', self.combined['category'].value_counts())
+
         curr_bg = self.combined['category'].value_counts()[0]
         curr_sg = self.combined['category'].value_counts()[1]
         
