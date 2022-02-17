@@ -1,5 +1,7 @@
 # Metadata from TensorFlow
 *.pb
+*.index
+*.data*
 
 # Data files
 *.csv
