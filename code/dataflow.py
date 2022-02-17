@@ -130,19 +130,15 @@ class Flow:
             which removes features from the combined data. Other options are
             "sim" or "real"
         """
-        
-        if (self.sf is None) and (self.rf is None): 
-            print("WARN: Dataframes are empty, unable to drop features")
-            print("Try calling combine_data or apply_preselection first to avoid this error")
+    
+        if target == 'sim':
+            self.sf.drop(features, axis=1, inplace=True)
+            self.features = [f for f in self.features if f not in features]
+        elif target == 'real':
+            self.rf.drop(features, axis=1, inplace=True)
+            self.features = [f for f in self.features if f not in features]
         else:
-            if target == 'sim':
-                self.sf.drop(features, axis=1, inplace=True)
-                self.features = [f for f in self.features if f not in features]
-            elif target == 'real':
-                self.rf.drop(features, axis=1, inplace=True)
-                self.features = [f for f in self.features if f not in features]
-            else:
-                self.combined.drop(features, axis=1, inplace=True)
+            self.combined.drop(features, axis=1, inplace=True)
 
     
     def get_features(self, features, tuple):
