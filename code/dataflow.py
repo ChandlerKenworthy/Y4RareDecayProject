@@ -69,7 +69,7 @@ class Flow:
         return common_features
     
     
-    def generate_feature(self, new_feature_name, expression):
+    def generate_feature(self, new_feature_name, expression, verbose=1):
         """
         Generate a new feature derived from features parsed at initial time of creation of the
         flow object.
@@ -86,14 +86,17 @@ class Flow:
         
         import numpy as np
         if self.combined is None:
-            print('WARN: No combined dataframe currently exists')
-            print('WARN: Automatically combining dataframes')
+            if verbose == 1:
+                print('WARN: No combined dataframe currently exists')
+                print('WARN: Automatically combining dataframes')
             self.combine_data()
         expression = self.add_preselection_df_prefix(expression, 'combined')[0]
-        print(f'Attempting to evaluate:\n{expression}')
+        if verbose == 1:
+            print(f'Attempting to evaluate:\n{expression}')
         custom_series = eval(expression)
         self.combined[new_feature_name] = custom_series
-        print(f'{new_feature_name} calculated successfully')
+        if verbose == 1:
+            print(f'{new_feature_name} calculated successfully')
     
     
     def to_csv(self, fname):
@@ -191,8 +194,11 @@ class Flow:
         analysis. Internal use only.
         """
         
+        import pandas as pd
+        temp_dfs = []
         for region in keep_regions:
-            self.rf = self.rf[self.rf['Lb_M'].isin(region)]
+            temp_dfs.append(self.rf[self.rf['Lb_M'].between(*region)])
+        self.rf = pd.concat(temp_dfs, ignore_index=False, sort=False)
 
     
     def get_simulated(self):
@@ -335,7 +341,6 @@ class Flow:
             
             if keep_regions != False:
                 real_features += ['Lb_M']
-                print('real feats', real_features)
             
             self.sf = self.get_features(sim_features, 'sim')
             self.rf = self.get_features(real_features, 'real')
@@ -350,7 +355,6 @@ class Flow:
             # Evaluate the pre-selection criteria
             
             if keep_regions != False:
-                self.sf.drop('Lb_M', inplace=True, axis=1)
                 self.rf.drop('Lb_M', inplace=True, axis=1)
                 # Remove the Lb_M column as if nothing ever happened
         
@@ -444,7 +448,7 @@ class Flow:
             An integer seed for the random sampling algorithm
         """
         
-        print(self.combined.columns, '\nHELLO FROGS\n', self.combined['category'])
+        print('HELLO FROGS\n', self.combined['category'].value_counts())
         curr_bg = self.combined['category'].value_counts()[0]
         curr_sg = self.combined['category'].value_counts()[1]
         
