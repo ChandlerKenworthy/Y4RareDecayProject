@@ -106,8 +106,6 @@ class Flow:
         fname : String
             The filepath and or filename that are to be used when writing
             out the CSV
-        
-        TODO: Be able to instantiate a Flow object with a CSV file
         """
         
         if (self.combined is None):
@@ -194,7 +192,6 @@ class Flow:
         """
         
         for region in keep_regions:
-            self.sf = self.sf[self.sf['Lb_M'].isin(region)]
             self.rf = self.rf[self.rf['Lb_M'].isin(region)]
 
     
@@ -337,8 +334,8 @@ class Flow:
             # so we request as few features as possible and avoid duplicates
             
             if keep_regions != False:
-                sim_features += ['Lb_M']
                 real_features += ['Lb_M']
+                print('real feats', real_features)
             
             self.sf = self.get_features(sim_features, 'sim')
             self.rf = self.get_features(real_features, 'real')
@@ -395,9 +392,9 @@ class Flow:
         self.sf = self.sf[self.features + ['category']]
         self.rf = self.rf[self.features + ['category']]
         # Remove any columns that were used for pre-selection
-        
-        self.sf = self.sf[~self.sf.index.duplicated(keep='first')]
-        self.rf = self.rf[~self.rf.index.duplicated(keep='first')]
+        print(self.sf['category'].value_counts())
+        #self.sf = self.sf[~self.sf.index.duplicated(keep='first')]
+        #self.rf = self.rf[~self.rf.index.duplicated(keep='first')]
         # Remove duplicate events
         
         self.combined = pd.concat([self.sf, self.rf], ignore_index=True, sort=False)
@@ -447,6 +444,7 @@ class Flow:
             An integer seed for the random sampling algorithm
         """
         
+        print(self.combined.columns, '\nHELLO FROGS\n', self.combined['category'])
         curr_bg = self.combined['category'].value_counts()[0]
         curr_sg = self.combined['category'].value_counts()[1]
         
