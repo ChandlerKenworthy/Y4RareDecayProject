@@ -1,7 +1,7 @@
 #
 # Package Name: DataFlow
 # Author: Chandler Kenworthy
-# Version: 1.3
+# Version: 2.1
 #
 
 class Flow:
