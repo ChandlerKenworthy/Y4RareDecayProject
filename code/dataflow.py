@@ -7,7 +7,7 @@
 class Flow:
     # Description goes here
     
-    def __init__(self, features, sim_fname, real_fname, csv_path=None):
+    def __init__(self, features, sim_fname, real_fname, common_features_fname='common_features', csv_path=None):
         """
         Set up the flow object by pre-requesting all the features that
         will be needed as features when training the neural network.
@@ -18,6 +18,7 @@ class Flow:
             A list of features that will be used to train the neural network
         """
         
+        self.common_features_fname = common_features_fname
         if (csv_path is not None):
             import pandas as pd
             self.combined = pd.read_csv(csv_path, sep=" ", index_col='Index')
@@ -38,6 +39,15 @@ class Flow:
             self.real_tree = ":DTT1520me/DecayTree"
             self.preselection_applied = False
             self.combined = None
+        
+            
+    
+    def set_sim_tree(self, tree):
+        self.sim_tree = tree
+        
+    
+    def set_real_tree(self, tree):
+        self.real_tree = tree
                     
     
     def check_common_features(self, features):
@@ -58,7 +68,7 @@ class Flow:
         """
         
         import pandas as pd
-        common_features_list = pd.read_csv('common_features.txt', sep=' ', index_col=None)['Feature'].to_list()
+        common_features_list = pd.read_csv(f'{self.common_features_fname}.txt', sep=' ', index_col=None)['Feature'].to_list()
         # Read in the common features from the file
         common_features = [feature for feature in features if feature in common_features_list]
         
@@ -333,6 +343,20 @@ class Flow:
         import numpy as np
         if (self.simulated_preselection is None) or (self.real_preselection is None):
             print('WARN: No preselection has been specified for either/both the simulated and real data')
+            
+            if (keep_regions != False) and ('Lb_M' not in real_features):
+                real_features += ['Lb_M']
+            
+            self.sf = self.get_features(sim_features, 'sim')
+            self.rf = self.get_features(real_features, 'real')
+            # Get all the features that will be required 
+
+            if keep_regions != False:
+                self.restrict_sidebands(keep_regions)
+                self.rf.drop('Lb_M', inplace=True, axis=1)
+                # Apply the mass restriction before pre-selection
+            print("INFO: Applied mass region restriction if passed. Empty pre-selection applied")
+            
         else:
             sim_features = list(dict.fromkeys(self.features + self.simulated_preselection_features))
             real_features = list(dict.fromkeys(self.features + self.real_preselection_features))
@@ -346,7 +370,7 @@ class Flow:
             self.sf = self.get_features(sim_features, 'sim')
             self.rf = self.get_features(real_features, 'real')
             # Get all the features that will be required 
-            print('SHAPE', self.sf.shape)
+
             if keep_regions != False:
                 self.restrict_sidebands(keep_regions)
                 self.rf.drop('Lb_M', inplace=True, axis=1)
@@ -355,7 +379,7 @@ class Flow:
             self.sf = self.sf[eval(self.simulated_preselection)]
             self.rf = self.rf[eval(self.real_preselection)]
             # Evaluate the pre-selection criteria
-            print('SHAPE', self.sf.shape)
+
         self.preselection_applied = True
         
     
@@ -511,6 +535,9 @@ class Flow:
         random_state : int
             The integer seed to use in the random generator performing
             the shuffling. 
+        normalise : bool
+            Whether to normalise all the features in the dataframe defaults
+            to true
             
         Returns
         -------
