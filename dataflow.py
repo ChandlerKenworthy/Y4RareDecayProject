@@ -1,7 +1,7 @@
 #
 # Package Name: DataFlow
 # Author: Chandler Kenworthy
-# Version: 2.1
+# Version: 7.3.1
 #
 
 
@@ -190,6 +190,9 @@ class Flow:
         """
         
         import uproot as up
+        import numpy as np
+        import pandas as pd
+        
         if tuple == 'real':
             fName = self.real_fname
             tree = self.real_tree
@@ -202,8 +205,20 @@ class Flow:
             fts += ["Lb_BKGCAT"]
         fts = list(dict.fromkeys(fts))
         # Remove any duplicate features
+        is_dtf = False
+        
         with up.open(fName + tree) as f:
             # Open the tuple using UpRoot
+            
+            if 'Lb_DTF_PV_chi2' in fts:
+                is_dtf = True
+                fts.remove('Lb_DTF_PV_chi2')
+                n = f.arrays(['eventNumber', 'Lb_DTF_PV_chi2'], library='np')
+                new = np.array([n['Lb_DTF_PV_chi2'][i][0] for i in range(len(n['Lb_DTF_PV_chi2']))])
+                z = pd.DataFrame({'eventNumber': n['eventNumber'], 'Lb_DTF_PV_chi2': new})
+                z.set_index('eventNumber', inplace=True)
+                z = z[~z.index.duplicated(keep='first')]
+                
             df = f.arrays(fts, library="pd")
             df.set_index("eventNumber", inplace=True)
             df.columns = fts[1:]
@@ -211,6 +226,10 @@ class Flow:
             # Randomly shuffle beforehand so the duplication happens 'randomly'
             df = df[~df.index.duplicated(keep='first')]
             # Remove duplicate events in a random but reproducible way
+            
+            if is_dtf:
+                df['Lb_DTF_PV_chi2'] = z['Lb_DTF_PV_chi2']
+            
         return df
     
     
