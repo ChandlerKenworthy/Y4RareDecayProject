@@ -7,7 +7,7 @@ from datetime import datetime, date
 
 sname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
 fname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-version = '6.0.3'
+version = '6.0.4'
 features = list(dict.fromkeys([
     'Lb_PT', 'Lb_IPCHI2_OWNPV', 'Lb_ENDVERTEX_CHI2', 'Lb_HOP',
     'L2_IPCHI2_OWNPV', 'L1_IPCHI2_OWNPV', 'LStar_ORIVX_CHI2', 'LStar_DIRA_OWNPV',
@@ -18,7 +18,7 @@ features = list(dict.fromkeys([
     'Lb_MINIPCHI2', 'Lb_DIRA_OWNPV', 'p_ETA', 'L1_ETA', 'L2_ETA',
     'Lb_IP01', 'Lb_IP23', 'JPs_DIRA_TOPPV', 'Lb_IP_OWNPV', 'p_TRACK_VeloCHI2NDOF',
     'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr',
-    'Lb_DTF_PV_Lambda_1520_0_decayLengthErr', 'K_TRACK_VeloCHI2NDOF'
+    'Lb_DTF_PV_Lambda_1520_0_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 'Lb_DTF_PV_chi2'
 ]))
 
 new_features = {
@@ -41,7 +41,8 @@ feats = list(dict.fromkeys([
     'L1_ETA', 'L2_ETA', 'Lb_IP01', 'Lb_IP23', 'LN_COS_LBDIRA', 
     'LN_JPs_DIRA_TOPPV', 'Lb_IP_OWNPV', 'p_TRACK_VeloCHI2NDOF', 
     'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr',
-    'Lb_DTF_PV_Lambda_1520_0_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 'category'
+    'Lb_DTF_PV_Lambda_1520_0_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 
+    'Lb_DTF_PV_chi2', 'category'
 ]))
 
 apply_preselection = True
