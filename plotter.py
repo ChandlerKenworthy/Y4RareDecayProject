@@ -68,7 +68,7 @@ class ProbabilityDistribution:
             print("FAULT: Unable to generate predictions from unknown model type")
         return predictions
     
-    def plot_singular(self, models, model_names, dataset, split_bg_sig=False, hide_errors=False):
+    def plot_singular(self, models, model_names, dataset, split_bg_sig=False, hide_errors=False, colors=None):
         """
         Generate a probability distribution plot for the models predicted values
         for a singular dataset for example the test set.
@@ -90,6 +90,9 @@ class ProbabilityDistribution:
         from matplotlib.ticker import AutoMinorLocator
         import numpy as np
         
+        if colors is None:
+            colors = self.colors
+        
         fig, ax = plt.subplots(1, 1, figsize=(7, 6))
         fig.patch.set_facecolor('#FFFFFF')
         ax.xaxis.set_minor_locator(AutoMinorLocator())
@@ -109,20 +112,20 @@ class ProbabilityDistribution:
                 args['linestyle'] = 'solid'
                 predictions = self.get_model_predictions(model, dataset)
                 args['label'] = f"{model_names[i]} {dataset.capitalize()}"
-                args['color'] = self.colors[str(type(model))][dataset]
+                args['color'] = colors[str(type(model))][dataset]
                 freqs = ax.hist(predictions, **args)[0]
                 if not hide_errors:
-                    ax.fill_between(self.nbins[:-1], freqs-np.sqrt(freqs), freqs+np.sqrt(freqs), alpha=0.2, color=self.colors[str(type(model))][dataset], edgecolor=None, step='post', hatch='//')
+                    ax.fill_between(self.nbins[:-1], freqs-np.sqrt(freqs), freqs+np.sqrt(freqs), alpha=0.2, color=colors[str(type(model))][dataset], edgecolor=None, step='post', hatch='//')
             else:
                 l = ['background', 'signal']
                 for n in [0, 1]:
                     args['linestyle'] = self.linestyles[l[n]]
                     args['label'] = f"{model_names[i]} {dataset} {l[n]}"
-                    args['color'] = self.colors[str(type(model))][dataset]
+                    args['color'] = colors[str(type(model))][dataset]
                     predictions = self.get_model_predictions(model, dataset, keep_only=n)
                     freqs = ax.hist(predictions, **args)[0]
                     if not hide_errors:
-                        ax.fill_between(self.nbins[:-1], freqs-np.sqrt(freqs), freqs+np.sqrt(freqs), alpha=0.2, color=self.colors[str(type(model))][dataset], edgecolor=None, step='post', hatch='//')
+                        ax.fill_between(self.nbins[:-1], freqs-np.sqrt(freqs), freqs+np.sqrt(freqs), alpha=0.2, color=colors[str(type(model))][dataset], edgecolor=None, step='post', hatch='//')
                 
         ax.set_ylim(bottom=0)
         plt.ylabel('Normalised Frequency', horizontalalignment='right', y=1.0, fontsize=14, **fonts)
