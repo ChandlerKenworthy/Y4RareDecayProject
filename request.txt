@@ -1,4 +1,23 @@
-Lb_PT
-JPs_IP_ORIVX
-np.log( LStar_DIRA_OWNPV )
-np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
+Features,FeatureName
+JPs_FD_ORIVX,
+LStar_ORIVX_CHI2,
+Lb_ENDVERTEX_CHI2,
+np.log( Lb_IPCHI2_OWNPV ),LN_Lb_IPCHI2_OWNPV
+Lb_PT,
+p_ETA,
+np.log( Lb_IP01 ),LN_Lb_IP01
+np.log( Lb_IP23 ),LN_Lb_IP23
+np.log( Lb_IP_OWNPV ),LN_Lb_IP_OWNPV
+p_TRACK_VeloCHI2NDOF,
+Lb_TAUERR,
+K_TRACK_VeloCHI2NDOF,
+np.log( Lb_DTF_PV_chi2 ),Lb_DTF_PV_chi2
+JPs_ORIVX_CHI2,
+L1_TRACK_VeloCHI2NDOF,
+L2_TRACK_CHI2NDOF,
+JPs_IP_TOPPV,
+LStar_IP_ORIVX,
+JPs_IP_ORIVX,
+np.log( Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO ),LN_SUM_CONE_ISO
+np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV ),LN_SUM_LIPCHI2
+np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P ))),LN_COS_THETA
