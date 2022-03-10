@@ -7,25 +7,26 @@ from datetime import datetime, date
 
 sname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
 fname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-version = '6.0.5'
+version = '6.0.6'
 features = list(dict.fromkeys([
-    'Lb_PT', 'Lb_IPCHI2_OWNPV', 'Lb_ENDVERTEX_CHI2', 'Lb_HOP',
+    'Lb_PT', 'Lb_IPCHI2_OWNPV', 'Lb_ENDVERTEX_CHI2',
     'L2_IPCHI2_OWNPV', 'L1_IPCHI2_OWNPV', 'LStar_ORIVX_CHI2', 'LStar_DIRA_OWNPV',
     'JPs_FD_ORIVX', 'p_PZ', 'p_P', 'K_PZ', 'K_P', 'K_PY', 'K_PT', 'p_PY', 'p_PT',
     'K_P', 'Lb_L1_cmult_0.5TrkISO', 'Lb_L2_cmult_0.5TrkISO', 'Lb_p_cmult_0.5TrkISO',
     'Lb_K_cmult_0.5TrkISO', 'Lb_L1_cc_asy_PT_0.5ConeISO', 'Lb_L2_cc_asy_PT_0.5ConeISO',
     'Lb_p_cc_asy_PT_0.5ConeISO', 'Lb_K_cc_asy_PT_0.5ConeISO', 'Lb_P', 'Lb_PT',
-    'Lb_MINIPCHI2', 'Lb_DIRA_OWNPV', 'p_ETA', 'L1_ETA', 'L2_ETA',
+    'Lb_MINIPCHI2', 'Lb_DIRA_OWNPV', 'p_ETA',
     'Lb_IP01', 'Lb_IP23', 'JPs_DIRA_TOPPV', 'Lb_IP_OWNPV', 'p_TRACK_VeloCHI2NDOF',
-    'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 'Lb_DTF_PV_chi2'
+    'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 'Lb_DTF_PV_chi2',
+    'JPs_ORIVX_CHI2', 'L1_TRACK_VeloCHI2NDOF', 'L2_TRACK_CHI2NDOF',
+    'JPs_IP_TOPPV', 'LStar_IP_ORIVX', 'JPs_IP_ORIVX'
 ]))
 
 new_features = {
-    'ABS_ARTANH_PZ_P': "np.abs(np.arctanh( p_PZ / p_P )-np.arctanh( K_PZ / K_P ))",
+    #'ABS_ARTANH_PZ_P': "np.abs(np.arctanh( p_PZ / p_P )-np.arctanh( K_PZ / K_P ))",
     'MAG_ARSINH_PY_PT': "np.sqrt((np.arcsinh( K_PY / K_PT )-np.arcsinh( p_PY / p_PT ))**2+(np.arcsinh( K_P / K_PT )-np.arcsinh( p_P / p_PT ))**2)",
     'SUM_CONE_ISO': " Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO ",
     'SUM_LIPCHI2': " L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV ",
-    #'LB_TRACKISO': " Lb_L1_cmult_0.5TrkISO + Lb_L2_cmult_0.5TrkISO + Lb_p_cmult_0.5TrkISO + Lb_K_cmult_0.5TrkISO ",
     'LN_COS_THETA': "np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))",
     'LN_LB_MINIPCHI2': "np.log( Lb_MINIPCHI2 )",
     'LN_COS_LBDIRA': "np.log(1-np.cos( Lb_DIRA_OWNPV ))",
@@ -34,14 +35,15 @@ new_features = {
 }
 
 feats = list(dict.fromkeys([
-    'ABS_ARTANH_PZ_P', 'MAG_ARSINH_PY_PT', 'SUM_CONE_ISO', 'LN_COS_THETA',
+    'MAG_ARSINH_PY_PT', 'SUM_CONE_ISO', 'LN_COS_THETA',
     'SUM_LIPCHI2', 'LB_TRACKISO', 'JPs_FD_ORIVX', 'LN_LStar_DIRA_OWNPV',
-    'LStar_ORIVX_CHI2', 'JPs_DOCA12', 'Lb_HOP', 'Lb_ENDVERTEX_CHI2',
+    'LStar_ORIVX_CHI2', 'Lb_ENDVERTEX_CHI2',
     'Lb_IPCHI2_OWNPV', 'Lb_PT', 'LN_LB_MINIPCHI2', 'p_ETA',
-    'L1_ETA', 'L2_ETA', 'Lb_IP01', 'Lb_IP23', 'LN_COS_LBDIRA', 
+    'Lb_IP01', 'Lb_IP23', 'LN_COS_LBDIRA', 
     'LN_JPs_DIRA_TOPPV', 'Lb_IP_OWNPV', 'p_TRACK_VeloCHI2NDOF', 
     'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 
-    'Lb_DTF_PV_chi2', 'category'
+    'Lb_DTF_PV_chi2', 'JPs_ORIVX_CHI2', 'L1_TRACK_VeloCHI2NDOF', 'L2_TRACK_CHI2NDOF',
+    'JPs_IP_TOPPV', 'LStar_IP_ORIVX', 'JPs_IP_ORIVX', 'category'
 ]))
 
 apply_preselection = True
