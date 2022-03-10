@@ -1,0 +1,4 @@
+Lb_PT
+JPs_IP_ORIVX
+np.log( LStar_DIRA_OWNPV )
+np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
