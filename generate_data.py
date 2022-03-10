@@ -7,7 +7,7 @@ from datetime import datetime, date
 
 sname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
 fname = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-version = '6.0.4'
+version = '6.0.5'
 features = list(dict.fromkeys([
     'Lb_PT', 'Lb_IPCHI2_OWNPV', 'Lb_ENDVERTEX_CHI2', 'Lb_HOP',
     'L2_IPCHI2_OWNPV', 'L1_IPCHI2_OWNPV', 'LStar_ORIVX_CHI2', 'LStar_DIRA_OWNPV',
@@ -17,8 +17,7 @@ features = list(dict.fromkeys([
     'Lb_p_cc_asy_PT_0.5ConeISO', 'Lb_K_cc_asy_PT_0.5ConeISO', 'Lb_P', 'Lb_PT',
     'Lb_MINIPCHI2', 'Lb_DIRA_OWNPV', 'p_ETA', 'L1_ETA', 'L2_ETA',
     'Lb_IP01', 'Lb_IP23', 'JPs_DIRA_TOPPV', 'Lb_IP_OWNPV', 'p_TRACK_VeloCHI2NDOF',
-    'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr',
-    'Lb_DTF_PV_Lambda_1520_0_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 'Lb_DTF_PV_chi2'
+    'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 'Lb_DTF_PV_chi2'
 ]))
 
 new_features = {
@@ -30,18 +29,18 @@ new_features = {
     'LN_COS_THETA': "np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))",
     'LN_LB_MINIPCHI2': "np.log( Lb_MINIPCHI2 )",
     'LN_COS_LBDIRA': "np.log(1-np.cos( Lb_DIRA_OWNPV ))",
-    'LN_JPs_DIRA_TOPPV': "np.log( JPs_DIRA_TOPPV )"
+    'LN_JPs_DIRA_TOPPV': "np.log( JPs_DIRA_TOPPV )",
+    'LN_LStar_DIRA_OWNPV': "np.log( LStar_DIRA_OWNPV )"
 }
 
 feats = list(dict.fromkeys([
     'ABS_ARTANH_PZ_P', 'MAG_ARSINH_PY_PT', 'SUM_CONE_ISO', 'LN_COS_THETA',
-    'SUM_LIPCHI2', 'LB_TRACKISO', 'JPs_FD_ORIVX', 'LStar_DIRA_OWNPV',
+    'SUM_LIPCHI2', 'LB_TRACKISO', 'JPs_FD_ORIVX', 'LN_LStar_DIRA_OWNPV',
     'LStar_ORIVX_CHI2', 'JPs_DOCA12', 'Lb_HOP', 'Lb_ENDVERTEX_CHI2',
     'Lb_IPCHI2_OWNPV', 'Lb_PT', 'LN_LB_MINIPCHI2', 'p_ETA',
     'L1_ETA', 'L2_ETA', 'Lb_IP01', 'Lb_IP23', 'LN_COS_LBDIRA', 
     'LN_JPs_DIRA_TOPPV', 'Lb_IP_OWNPV', 'p_TRACK_VeloCHI2NDOF', 
-    'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr',
-    'Lb_DTF_PV_Lambda_1520_0_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 
+    'Lb_TAUERR', 'Lb_DTF_PV_decayLengthErr', 'K_TRACK_VeloCHI2NDOF', 
     'Lb_DTF_PV_chi2', 'category'
 ]))
 
