@@ -42,6 +42,7 @@ preselection = True
 preselection_path = 'preselection.txt'
 random_seed = 0
 equalise_event_numbers = True
+restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
 
 # Open the file with all the user requested features, some may be expressions
 user_features = pd.read_csv('request.txt', index_col=None, sep=',')
@@ -121,6 +122,9 @@ if preselection:
     print(f"Preselection applied without error\nNow there are {len(rdf)} events\n")
 rdf['IsSimulated'] = False
 rdf['category'] = 0
+
+if restrict_mass_sidebands != None:
+    rdf = rdf[[el or rdf['Lb_M'].between(restrict_mass_sidebands[1]).to_list()[i] for i, el in enumerate(rdf['Lb_M'].between(restrict_mass_sidebands[0]).to_list())]]
 
 # Remove the extra column that is in the simulated dataframe
 sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
