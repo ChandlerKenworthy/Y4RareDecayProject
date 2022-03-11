@@ -39,7 +39,7 @@ def add_df_prefix(boolean_mask, prefix):
 simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
 actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
 decay_tree_name = ':DTT1520me/DecayTree'
-version = '7.0.1'
+version = '7.0.2'
 preselection = True
 preselection_path = 'preselection.txt'
 random_seed = 0

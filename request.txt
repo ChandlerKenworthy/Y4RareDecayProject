@@ -1,28 +1,24 @@
 Features,FeatureName
-np.abs(np.arctanh( p_PZ / p_P )-np.arctanh( K_PZ / K_P )),ABS_ARTANH_PZ_P
-np.sqrt((np.arcsinh( K_PY / K_PT )-np.arcsinh( p_PY / p_PT ))**2+(np.arcsinh( K_P / K_PT )-np.arcsinh( p_P / p_PT ))**2),MAG_ARSINH_PY_PT
- Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO ,SUM_CONE_ISO
-np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P ))),LN_COS_THETA
- L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV ,SUM_LIPCHI2
 JPs_FD_ORIVX,
-LStar_DIRA_OWNPV,
 LStar_ORIVX_CHI2,
-Lb_HOP,
 Lb_ENDVERTEX_CHI2,
-Lb_IPCHI2_OWNPV,
+np.log( Lb_IPCHI2_OWNPV ),LN_Lb_IPCHI2_OWNPV
 Lb_PT,
-np.log( Lb_MINIPCHI2 ),LN_LB_MINIPCHI2
-p_ETA,
-L1_ETA,
-L2_ETA,
-Lb_IP01,
-Lb_IP23,
-np.log(1-np.cos( Lb_DIRA_OWNPV )),LN_COS_LBDIRA
-np.log( JPs_DIRA_TOPPV ),LN_JPs_DIRA_TOPPV
-Lb_IP_OWNPV,
+np.log( Lb_MINIPCHI2 ),LN_Lb_MINIPCHI2
+np.log( Lb_IP01 ),LN_Lb_IP01
+np.log( Lb_IP23 ),LN_Lb_IP23
+np.log( Lb_IP_OWNPV ),LN_Lb_IP_OWNPV
 p_TRACK_VeloCHI2NDOF,
 Lb_TAUERR,
-Lb_DTF_PV_decayLengthErr,
-Lb_DTF_PV_Lambda_1520_0_decayLengthErr,
 K_TRACK_VeloCHI2NDOF,
-Lb_DTF_PV_chi2,
+np.log( Lb_DTF_PV_chi2 ),LN_Lb_DTF_PV_chi2
+JPs_ORIVX_CHI2,
+L1_TRACK_VeloCHI2NDOF,
+L2_TRACK_CHI2NDOF,
+JPs_IP_TOPPV,
+LStar_IP_ORIVX,
+JPs_IP_ORIVX,
+np.log( Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO ),LN_SUM_CONEISO
+np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV ),LN_SUM_IPCHI2
+np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P ))),LN_COS_THETA
+np.log(1-np.cos( Lb_DIRA_OWNPV )),LN_COS_LBDIRA
