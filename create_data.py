@@ -3,6 +3,8 @@ import pandas as pd
 import uproot as up
 import os
 from datetime import datetime, date
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # Utility functions
 def add_df_prefix(boolean_mask, prefix):
@@ -37,12 +39,13 @@ def add_df_prefix(boolean_mask, prefix):
 simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
 actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
 decay_tree_name = ':DTT1520me/DecayTree'
-version = '7.0.0'
+version = '7.0.1'
 preselection = True
 preselection_path = 'preselection.txt'
 random_seed = 0
 equalise_event_numbers = True
 restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
+train, val, test = 0.6, 0.2, 0.2
 
 # Open the file with all the user requested features, some may be expressions
 user_features = pd.read_csv('request.txt', index_col=None, sep=',')
@@ -115,6 +118,9 @@ with up.open(actual_path + decay_tree_name) as f:
     # Remove duplicate events
     rdf = rdf[~rdf.index.duplicated(keep='first')]
 
+if restrict_mass_sidebands != None:
+    rdf = rdf[[el or rdf['Lb_M'].between(*restrict_mass_sidebands[1]).to_list()[i] for i, el in enumerate(rdf['Lb_M'].between(*restrict_mass_sidebands[0]).to_list())]]
+
 if preselection:
     print(f"Evaluating pre-selection for real data\nCurrently there are {len(rdf)} events")
     # Evaluate the pre-selection to remove events
@@ -123,14 +129,17 @@ if preselection:
 rdf['IsSimulated'] = False
 rdf['category'] = 0
 
-if restrict_mass_sidebands != None:
-    rdf = rdf[[el or rdf['Lb_M'].between(restrict_mass_sidebands[1]).to_list()[i] for i, el in enumerate(rdf['Lb_M'].between(restrict_mass_sidebands[0]).to_list())]]
-
 # Remove the extra column that is in the simulated dataframe
 sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
 
 # Join the dataframes together
+# TODO: Sort of features now then concat then dropna
+
 df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
+
+# Remove events with missing values
+#df.dropna(inplace=True, axis=0)
+# Above causes issues for real data not sure why...column mismatch?
 
 # Randomly shuffle the new dataframe
 df = df.sample(frac=1, random_state=random_seed)
@@ -174,6 +183,42 @@ df.reset_index(drop=True, inplace=True)
 if not os.path.isdir(f'data_files/{version}'):
     os.mkdir(f'data_files/{version}')
 df.to_csv(f'data_files/{version}/all.csv')
+
+# Do the train/val/test split
+train_and_test = df[:int(np.floor(len(df)*(train + val)))]
+val = df[int(np.floor(len(df)*(train + val))):]
+
+y = train_and_test['category']
+# The binary labels (classification problem) are assigned as the y column
+x = train_and_test.drop(['category'], axis=1)
+# Remove the category column from the training inputs
+
+X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(train+test)), test_size=1-(train/(train+test)), random_state=random_seed)
+# Split the training and test data accordingly so that the input fractions are maintained relative
+X_val, y_val = val.drop(['category'], axis=1), val['category']
+
+# Do the normalisation using sklearns transformer
+scaler = StandardScaler().fit(X_train)
+X_trains = scaler.transform(X_train)
+X_vals = scaler.transform(X_val)
+X_tests = scaler.transform(X_test)
+
+X_train = pd.DataFrame(X_trains, index=X_train.index, columns=X_train.columns).fillna(0)
+X_val = pd.DataFrame(X_vals, index=X_val.index, columns=X_val.columns).fillna(0)
+X_test = pd.DataFrame(X_tests, index=X_test.index, columns=X_test.columns).fillna(0)
+# In case you divide by a zero std. dev. fill the NaNs with zeros
+
+# Output all these files
+train = X_train.copy()
+train['category'] = y_train
+val = X_val.copy()
+val['category'] = y_val
+test = X_test.copy()
+test['category'] = y_test
+
+train.to_csv(f'data_files/{version}/train.csv')
+val.to_csv(f'data_files/{version}/val.csv')
+test.to_csv(f'data_files/{version}/test.csv')
 
 # Output the metadata file as well
 print(f"Output to CSV: data_files/{version}/all.csv\nGenerating metadata file...")
