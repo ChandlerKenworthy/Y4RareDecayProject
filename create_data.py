@@ -5,6 +5,7 @@ import os
 from datetime import datetime, date
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
 
 # Utility functions
 def add_df_prefix(boolean_mask, prefix):
@@ -36,15 +37,18 @@ def add_df_prefix(boolean_mask, prefix):
     return updated_mask, preselection_features
 
 # Define the simulation and actual data path names and decay tree name
-simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
-actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-decay_tree_name = ':DTT1520me/DecayTree'
-version = '7.0.2'
-preselection = True
+simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MCNorm/2016MD/halfSampleFeb22/job246-CombDVntuple-MCNorm-15144059-S28r2Restrip-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfSampleFeb22/job228-CombDVntuple-collision-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+#simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
+#actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
+decay_tree_name = ':DTT1520mm/DecayTree'
+
+version = '0.0.1'
+preselection = False
 preselection_path = 'preselection.txt'
 random_seed = 0
-equalise_event_numbers = True
-restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
+equalise_event_numbers = False
+restrict_mass_sidebands = None#[[4500, 5200], [5800, 6500]]
 train, val, test = 0.6, 0.2, 0.2
 
 # Open the file with all the user requested features, some may be expressions
@@ -75,13 +79,13 @@ multi_features_flattened = [item for sublist in multi_features for item in subli
 request_features = list(dict.fromkeys(single_features + multi_features_flattened + ['Lb_M']))
 
 # Get the features for the simulated data
-sim_request_features = request_features
+sim_request_features = list(dict.fromkeys(request_features + ['Lb_BKGCAT']))
 if preselection:
     # Make the pre-selection expression maleable to eval() and get features needed
     # to perform the pre-selection
     sim_eval_ps, sim_ps_fts = add_df_prefix(sim_ps, 'sdf')
-    sim_request_features = list(dict.fromkeys(sim_request_features + sim_ps_fts + ['Lb_BKGCAT']))
-    
+    sim_request_features = list(dict.fromkeys(sim_request_features + sim_ps_fts))
+
 with up.open(simulation_path + decay_tree_name) as f:
     # Call in all of these data
     sdf = f.arrays(["eventNumber"] + sim_request_features, library='pd')
@@ -198,10 +202,17 @@ X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(tra
 X_val, y_val = val.drop(['category'], axis=1), val['category']
 
 # Do the normalisation using sklearns transformer
-scaler = StandardScaler().fit(X_train)
-X_trains = scaler.transform(X_train)
-X_vals = scaler.transform(X_val)
-X_tests = scaler.transform(X_test)
+cols_to_transform = X_train.columns.to_list()
+cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
+
+ct = ColumnTransformer([
+        ('normaliser', StandardScaler(), cols_to_transform)
+    ], remainder='passthrough')
+
+ct.fit(X_train)
+X_trains = ct.transform(X_train)
+X_vals = ct.transform(X_val)
+X_tests = ct.transform(X_test)
 
 X_train = pd.DataFrame(X_trains, index=X_train.index, columns=X_train.columns).fillna(0)
 X_val = pd.DataFrame(X_vals, index=X_val.index, columns=X_val.columns).fillna(0)
