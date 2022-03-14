@@ -39,16 +39,19 @@ def add_df_prefix(boolean_mask, prefix):
 # Define the simulation and actual data path names and decay tree name
 simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MCNorm/2016MD/halfSampleFeb22/job246-CombDVntuple-MCNorm-15144059-S28r2Restrip-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
 actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfSampleFeb22/job228-CombDVntuple-collision-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+# Normalisation mode paths
+
 #simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
 #actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-decay_tree_name = ':DTT1520mm/DecayTree'
+# Signal mode paths
 
-version = '0.0.1'
+decay_tree_name = ':DTT1520mm/DecayTree'
+version = '0.0.2'
 preselection = False
 preselection_path = 'preselection.txt'
 random_seed = 0
 equalise_event_numbers = False
-restrict_mass_sidebands = None#[[4500, 5200], [5800, 6500]]
+restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
 train, val, test = 0.6, 0.2, 0.2
 
 # Open the file with all the user requested features, some may be expressions
@@ -123,7 +126,8 @@ with up.open(actual_path + decay_tree_name) as f:
     rdf = rdf[~rdf.index.duplicated(keep='first')]
 
 if restrict_mass_sidebands != None:
-    rdf = rdf[[el or rdf['Lb_M'].between(*restrict_mass_sidebands[1]).to_list()[i] for i, el in enumerate(rdf['Lb_M'].between(*restrict_mass_sidebands[0]).to_list())]]
+    rdf = rdf[np.logical_or(rdf['Lb_M'] < restrict_mass_sidebands[0][1], rdf['Lb_M'] > restrict_mass_sidebands[1][0])]
+    rdf = rdf[np.logical_or(rdf['Lb_M'] > restrict_mass_sidebands[0][0], rdf['Lb_M'] < restrict_mass_sidebands[1][1])]
 
 if preselection:
     print(f"Evaluating pre-selection for real data\nCurrently there are {len(rdf)} events")
