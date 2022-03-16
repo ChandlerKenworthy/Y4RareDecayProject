@@ -1,8 +1,8 @@
-Version: 0.0.1
+Version: 0.0.3
 Compile Date: 15/03/2022
-Compile Time: 08:54:04
+Compile Time: 08:55:15
 Preselection Applied: False
-Equal Event Ratio: False
+Equal Event Ratio: True
 Features Included:
 0. JPs_FD_ORIVX
 1. LStar_ORIVX_CHI2
