@@ -1,7 +1,7 @@
-Version: 7.0.2
-Compile Date: 11/03/2022
-Compile Time: 14:47:14
-Preselection Applied: True
+Version: 0.0.3
+Compile Date: 15/03/2022
+Compile Time: 08:55:15
+Preselection Applied: False
 Equal Event Ratio: True
 Features Included:
 0. JPs_FD_ORIVX
@@ -23,7 +23,7 @@ Features Included:
 16. JPs_IP_TOPPV
 17. LStar_IP_ORIVX
 18. JPs_IP_ORIVX
-19. np.log( Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO )
+19. np.log( Lb_L1_cc_asy_PT_0_5ConeISO + Lb_L2_cc_asy_PT_0_5ConeISO + Lb_p_cc_asy_PT_0_5ConeISO + Lb_K_cc_asy_PT_0_5ConeISO )
 20. np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV )
 21. np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
 22. np.log(1-np.cos( Lb_DIRA_OWNPV ))

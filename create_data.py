@@ -5,6 +5,7 @@ import os
 from datetime import datetime, date
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
 
 # Utility functions
 def add_df_prefix(boolean_mask, prefix):
@@ -36,11 +37,17 @@ def add_df_prefix(boolean_mask, prefix):
     return updated_mask, preselection_features
 
 # Define the simulation and actual data path names and decay tree name
-simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
-actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-decay_tree_name = ':DTT1520me/DecayTree'
-version = '7.0.2'
-preselection = True
+simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MCNorm/2016MD/halfSampleFeb22/job246-CombDVntuple-MCNorm-15144059-S28r2Restrip-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfSampleFeb22/job228-CombDVntuple-collision-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+# Normalisation mode paths
+
+#simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
+#actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
+# Signal mode paths
+
+decay_tree_name = ':DTT1520mm/DecayTree'
+version = '0.0.3'
+preselection = False
 preselection_path = 'preselection.txt'
 random_seed = 0
 equalise_event_numbers = True
@@ -75,13 +82,13 @@ multi_features_flattened = [item for sublist in multi_features for item in subli
 request_features = list(dict.fromkeys(single_features + multi_features_flattened + ['Lb_M']))
 
 # Get the features for the simulated data
-sim_request_features = request_features
+sim_request_features = list(dict.fromkeys(request_features + ['Lb_BKGCAT']))
 if preselection:
     # Make the pre-selection expression maleable to eval() and get features needed
     # to perform the pre-selection
     sim_eval_ps, sim_ps_fts = add_df_prefix(sim_ps, 'sdf')
-    sim_request_features = list(dict.fromkeys(sim_request_features + sim_ps_fts + ['Lb_BKGCAT']))
-    
+    sim_request_features = list(dict.fromkeys(sim_request_features + sim_ps_fts))
+
 with up.open(simulation_path + decay_tree_name) as f:
     # Call in all of these data
     sdf = f.arrays(["eventNumber"] + sim_request_features, library='pd')
@@ -119,7 +126,8 @@ with up.open(actual_path + decay_tree_name) as f:
     rdf = rdf[~rdf.index.duplicated(keep='first')]
 
 if restrict_mass_sidebands != None:
-    rdf = rdf[[el or rdf['Lb_M'].between(*restrict_mass_sidebands[1]).to_list()[i] for i, el in enumerate(rdf['Lb_M'].between(*restrict_mass_sidebands[0]).to_list())]]
+    rdf = rdf[np.logical_or(rdf['Lb_M'] < restrict_mass_sidebands[0][1], rdf['Lb_M'] > restrict_mass_sidebands[1][0])]
+    rdf = rdf[np.logical_or(rdf['Lb_M'] > restrict_mass_sidebands[0][0], rdf['Lb_M'] < restrict_mass_sidebands[1][1])]
 
 if preselection:
     print(f"Evaluating pre-selection for real data\nCurrently there are {len(rdf)} events")
@@ -132,36 +140,40 @@ rdf['category'] = 0
 # Remove the extra column that is in the simulated dataframe
 sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
 
+# Evaluate the custom expressions
+for index, row in user_features.iterrows():
+    # Does this row contain a custom feature
+    if row['IsCustom']:
+        sdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'sdf')[0])
+        rdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'rdf')[0])
+    else:
+        pass
+    
 # Join the dataframes together
-# TODO: Sort of features now then concat then dropna
-
+fts = list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))
+rdf, sdf = rdf[fts], sdf[fts]
 df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
 
 # Remove events with missing values
-#df.dropna(inplace=True, axis=0)
+print(f'Removing events with NaN values...({len(df)})')
+df.dropna(inplace=True, axis=0)
+print(f'Done! New shape: {len(df)}')
 # Above causes issues for real data not sure why...column mismatch?
 
 # Randomly shuffle the new dataframe
 df = df.sample(frac=1, random_state=random_seed)
 
 # Only keep the features we needed to fulfill the users request
-df = df[list(dict.fromkeys(request_features + ['category', 'Lb_M', 'IsSimulated']))]
-
-# Evaluate the custom expressions
-for index, row in user_features.iterrows():
-    # Does this row contain a custom feature
-    if row['IsCustom']:
-        df[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'df')[0])
-    else:
-        pass
+#df = df[list(dict.fromkeys(request_features + ['category', 'Lb_M', 'IsSimulated']))]
     
 # Now we have made the custom features drop anything else not needed
-df = df[list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))]
+#df = df[list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))]
 
 # Apply an event ratio restriction
 if equalise_event_numbers:
     nbg = df['category'].value_counts()[0]
     nsg = df['category'].value_counts()[1]
+    print(f'INFO: Sample currently includes {nbg} background and {nsg} signal events')
     n_to_remove = np.abs(nsg - nbg)
     
     if nsg > nbg:
@@ -198,10 +210,17 @@ X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(tra
 X_val, y_val = val.drop(['category'], axis=1), val['category']
 
 # Do the normalisation using sklearns transformer
-scaler = StandardScaler().fit(X_train)
-X_trains = scaler.transform(X_train)
-X_vals = scaler.transform(X_val)
-X_tests = scaler.transform(X_test)
+cols_to_transform = X_train.columns.to_list()
+cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
+
+ct = ColumnTransformer([
+        ('normaliser', StandardScaler(), cols_to_transform)
+    ], remainder='passthrough')
+
+ct.fit(X_train)
+X_trains = ct.transform(X_train)
+X_vals = ct.transform(X_val)
+X_tests = ct.transform(X_test)
 
 X_train = pd.DataFrame(X_trains, index=X_train.index, columns=X_train.columns).fillna(0)
 X_val = pd.DataFrame(X_vals, index=X_val.index, columns=X_val.columns).fillna(0)
