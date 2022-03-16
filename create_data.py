@@ -46,11 +46,11 @@ actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfS
 # Signal mode paths
 
 decay_tree_name = ':DTT1520mm/DecayTree'
-version = '0.0.2'
+version = '0.0.3'
 preselection = False
 preselection_path = 'preselection.txt'
 random_seed = 0
-equalise_event_numbers = False
+equalise_event_numbers = True
 restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
 train, val, test = 0.6, 0.2, 0.2
 
@@ -140,36 +140,40 @@ rdf['category'] = 0
 # Remove the extra column that is in the simulated dataframe
 sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
 
+# Evaluate the custom expressions
+for index, row in user_features.iterrows():
+    # Does this row contain a custom feature
+    if row['IsCustom']:
+        sdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'sdf')[0])
+        rdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'rdf')[0])
+    else:
+        pass
+    
 # Join the dataframes together
-# TODO: Sort of features now then concat then dropna
-
+fts = list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))
+rdf, sdf = rdf[fts], sdf[fts]
 df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
 
 # Remove events with missing values
-#df.dropna(inplace=True, axis=0)
+print(f'Removing events with NaN values...({len(df)})')
+df.dropna(inplace=True, axis=0)
+print(f'Done! New shape: {len(df)}')
 # Above causes issues for real data not sure why...column mismatch?
 
 # Randomly shuffle the new dataframe
 df = df.sample(frac=1, random_state=random_seed)
 
 # Only keep the features we needed to fulfill the users request
-df = df[list(dict.fromkeys(request_features + ['category', 'Lb_M', 'IsSimulated']))]
-
-# Evaluate the custom expressions
-for index, row in user_features.iterrows():
-    # Does this row contain a custom feature
-    if row['IsCustom']:
-        df[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'df')[0])
-    else:
-        pass
+#df = df[list(dict.fromkeys(request_features + ['category', 'Lb_M', 'IsSimulated']))]
     
 # Now we have made the custom features drop anything else not needed
-df = df[list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))]
+#df = df[list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))]
 
 # Apply an event ratio restriction
 if equalise_event_numbers:
     nbg = df['category'].value_counts()[0]
     nsg = df['category'].value_counts()[1]
+    print(f'INFO: Sample currently includes {nbg} background and {nsg} signal events')
     n_to_remove = np.abs(nsg - nbg)
     
     if nsg > nbg:
