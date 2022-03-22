@@ -134,8 +134,9 @@ if preselection:
     # Evaluate the pre-selection to remove events
     rdf = rdf[eval(real_eval_ps)]     
     print(f"Preselection applied without error\nNow there are {len(rdf)} events\n")
+    
 rdf['IsSimulated'] = False
-rdf['category'] = 0
+rdf['category'] = 0 # For normalisation mode this is only true if sidebands are restricted!
 
 # Remove the extra column that is in the simulated dataframe
 sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
@@ -155,10 +156,9 @@ rdf, sdf = rdf[fts], sdf[fts]
 df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
 
 # Remove events with missing values
-print(f'Removing events with NaN values...({len(df)})')
+print(f'INFO: {len(df)} events in combined data\nINFO: Removing events with NaN values')
 df.dropna(inplace=True, axis=0)
-print(f'Done! New shape: {len(df)}')
-# Above causes issues for real data not sure why...column mismatch?
+print(f'INFo: NaN events removed\nINFO: {len(df)} events retained')
 
 # Randomly shuffle the new dataframe
 df = df.sample(frac=1, random_state=random_seed)
@@ -187,6 +187,7 @@ if equalise_event_numbers:
     else:
         # They are already equal
         pass
+    print(f'INFO: Sample now includes {df["category"].value_counts()[0]} and {df["category"].value_counts()[1]} signal events')
     
 # Reset the index as well
 df.reset_index(drop=True, inplace=True)
@@ -195,6 +196,7 @@ df.reset_index(drop=True, inplace=True)
 if not os.path.isdir(f'data_files/{version}'):
     os.mkdir(f'data_files/{version}')
 df.to_csv(f'data_files/{version}/all.csv')
+# Note that the 'all' data is not normalised!
 
 # Do the train/val/test split
 train_and_test = df[:int(np.floor(len(df)*(train + val)))]
@@ -212,12 +214,12 @@ X_val, y_val = val.drop(['category'], axis=1), val['category']
 # Do the normalisation using sklearns transformer
 cols_to_transform = X_train.columns.to_list()
 cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
+# The columns to apply the transformer to 
 
-ct = ColumnTransformer([
-        ('normaliser', StandardScaler(), cols_to_transform)
-    ], remainder='passthrough')
+ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')
 
 ct.fit(X_train)
+# Get the values for the normaliser from X_train
 X_trains = ct.transform(X_train)
 X_vals = ct.transform(X_val)
 X_tests = ct.transform(X_test)
