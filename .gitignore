@@ -2,6 +2,10 @@
 *.pb
 *.index
 *.data*
+trial.json
+oracle.json
+tuner0.json
+checkpoint
 
 # Data files
 *.csv
