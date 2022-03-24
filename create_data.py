@@ -37,22 +37,23 @@ def add_df_prefix(boolean_mask, prefix):
     return updated_mask, preselection_features
 
 # Define the simulation and actual data path names and decay tree name
-simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MCNorm/2016MD/halfSampleFeb22/job246-CombDVntuple-MCNorm-15144059-S28r2Restrip-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
-actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfSampleFeb22/job228-CombDVntuple-collision-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+#simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MCNorm/2016MD/halfSampleFeb22/job246-CombDVntuple-MCNorm-15144059-S28r2Restrip-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
+#actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfSampleFeb22/job228-CombDVntuple-collision-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
 # Normalisation mode paths
 
-#simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
-#actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
+simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
+actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
 # Signal mode paths
 
-decay_tree_name = ':DTT1520mm/DecayTree'
-version = '0.0.3'
-preselection = False
+decay_tree_name = ':DTT1520me/DecayTree'
+version = '8.0.1'
+preselection = True
 preselection_path = 'preselection.txt'
 random_seed = 0
-equalise_event_numbers = True
+equalise_event_numbers = False
 restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
 train, val, test = 0.6, 0.2, 0.2
+dropnan = False
 
 # Open the file with all the user requested features, some may be expressions
 user_features = pd.read_csv('request.txt', index_col=None, sep=',')
@@ -156,9 +157,11 @@ rdf, sdf = rdf[fts], sdf[fts]
 df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
 
 # Remove events with missing values
-print(f'INFO: {len(df)} events in combined data\nINFO: Removing events with NaN values')
-df.dropna(inplace=True, axis=0)
-print(f'INFo: NaN events removed\nINFO: {len(df)} events retained')
+if dropnan:
+    print(f'INFO: {len(df)} events in combined data\nINFO: Removing events with NaN values')
+    print(f'INFO: Columns with NaN present:\n{df.isna().sum()}')
+    df.dropna(inplace=True, axis=0)
+    print(f'INFO: NaN events removed\nINFO: {len(df)} events retained')
 
 # Randomly shuffle the new dataframe
 df = df.sample(frac=1, random_state=random_seed)
@@ -249,7 +252,7 @@ now = datetime.now()
 current_time = now.strftime("%H:%M:%S")
 today = date.today()
 d1 = today.strftime("%d/%m/%Y")
-f.write(f"Version: {version}\nCompile Date: {d1}\nCompile Time: {current_time}\nPreselection Applied: {preselection}\n")
+f.write(f"Version: {version}\nCompile Date: {d1}\nCompile Time: {current_time}\nPreselection Applied: {preselection}\nNaN Dropped: {dropnan}\n")
 f.write(f"Equal Event Ratio: {equalise_event_numbers}\nFeatures Included:\n")
 
 for i, p in enumerate(user_features['Features'].to_list()):
