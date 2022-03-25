@@ -143,7 +143,17 @@ def create_csv(kwargs):
         # sample and probably background but within the signal region
     else:
         rdf['category'] = 0
-        
+    
+        # Restrict the mass sidebands
+    if type(kwargs['restrict_mass']) is tuple:
+        print(f"INFO: Restricting mass sidebands\nINFO: Currently there are {len(rdf)} events")
+        print(f"INFO: There are {np.count_nonzero(rdf['Lb_M'] < 4500)} events less than the lower mass threshold")
+        print(f"INFO: There are {np.count_nonzero(rdf['Lb_M'] > 6500)} events above the higher mass threshold")
+        print(f"INFO: There are {np.count_nonzero(np.logical_and((rdf['Lb_M'] > 5200).to_numpy(), (rdf['Lb_M'] < 5800)).to_numpy())} events between threshold values")
+        rdf = rdf[np.logical_or(rdf['Lb_M'].between(*kwargs['restrict_mass'][1]).to_numpy(), rdf['Lb_M'].between(*kwargs['restrict_mass'][0]).to_numpy())].copy()
+        # this is throwing away signal events you moron
+        print(f"INFO: Mass restriction complete\nINFO: Currently there are {len(rdf)} events")
+    
     # Remove the extra column that is in the simulated dataframe
     sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
         
@@ -162,15 +172,6 @@ def create_csv(kwargs):
     
     # Join the dataframes together
     df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
-    
-    # Restrict the mass sidebands
-    if type(kwargs['restrict_mass']) is tuple:
-        print(f"INFO: Restricting mass sidebands\nINFO: Currently there are {len(df)} events")
-        print(f"INFO: There are {np.count_nonzero(df['Lb_M'] < 4500)} events less than the lower mass threshold")
-        print(f"INFO: There are {np.count_nonzero(df['Lb_M'] > 6500)} events above the higher mass threshold")
-        print(f"INFO: There are {np.count_nonzero(np.logical_and((df['Lb_M'] > 5200).to_numpy(), (df['Lb_M'] < 5800)).to_numpy())} events between threshold values")
-        df = df[np.logical_or(df['Lb_M'].between(*kwargs['restrict_mass'][1]).to_numpy(), df['Lb_M'].between(*kwargs['restrict_mass'][0]).to_numpy())].copy()
-        print(f"INFO: Mass restriction complete\nINFO: Currently there are {len(df)} events")
     
     # Remove events with missing values
     if kwargs['dropnan']:

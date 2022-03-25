@@ -1,12 +1,12 @@
-Signal Events: 18194
-Background Events: 18194
-Version: 9.0.2
+Signal Events: 4297
+Background Events: 60356
+Version: 9.1.1
 Compile Date: 25/03/2022
-Compile Time: 08:33:35
-Preselection Applied: True
+Compile Time: 08:49:04
+Preselection Applied: False
 NaN Dropped: False
-Equal Event Ratio: True
-Restrict Masses: None
+Equal Event Ratio: False
+Restrict Masses: ([4600, 5200], [5800, 6400])
 Normalisation Mode: False
 Features Included:
 0. JPs_FD_ORIVX
