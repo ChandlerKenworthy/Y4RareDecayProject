@@ -7,8 +7,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 
-# Utility functions
+
 def add_df_prefix(boolean_mask, prefix):
+    """
+    For some set of evaluable conditions with feature names present
+    return a string with the appropriate Pythonic dataframe wrapping around it
+    so it can be used inside of an eval expression.
+    """
     preselection_features = []
     begin, end = False, False
     begin_position, end_position = 0, 0
@@ -36,225 +41,243 @@ def add_df_prefix(boolean_mask, prefix):
         preselection_features = preselection_features[0]
     return updated_mask, preselection_features
 
-# Define the simulation and actual data path names and decay tree name
-simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MCNorm/2016MD/halfSampleFeb22/job246-CombDVntuple-MCNorm-15144059-S28r2Restrip-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
-actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realDataNorm/2016MD/halfSampleFeb22/job228-CombDVntuple-collision-firstHalf-2016MD-pKmumu-PF__PreselectedV1.root"
-# Normalisation mode paths
 
-#simulation_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/MC/2016MD/fullSampleOct2021/job207-CombDVntuple-15314000-MC2016MD_Full-pKmue-MC.root"
-#actual_path = "/disk/moose/lhcb/djdt/Lb2L1520mueTuples/realData/2016MD/halfSampleOct2021/blindedTriggeredL1520Selec-collision-firstHalf2016MD-pKmue_Fullv9.root"
-# Signal mode paths
+def create_csv(kwargs):
+    """
+    Generate a CSV using the arguments passed separate for the training,
+    validation and test data samples. Also output an entire non-normalised
+    version
+    """
 
-decay_tree_name = ':DTT1520mm/DecayTree'
-version = '0.0.3'
-preselection = False
-preselection_path = 'preselection.txt'
-random_seed = 0
-equalise_event_numbers = True
-restrict_mass_sidebands = [[4500, 5200], [5800, 6500]]
-train, val, test = 0.6, 0.2, 0.2
-
-# Open the file with all the user requested features, some may be expressions
-user_features = pd.read_csv('request.txt', index_col=None, sep=',')
-user_features['FeatureName'].fillna(user_features['Features'], inplace=True)
-
-# Find all the features that are custom expressions
-user_features['IsCustom'] = [' ' in f for f in user_features['Features']]
-
-# Find all the features we need to request as custom expressions may contain multiple
-user_features['Request'] = [add_df_prefix(f, 'df')[1] for f in user_features['Features']]
-
-# If applying preselection get the preselections from the text file
-if preselection: 
-    preselections = pd.read_csv(preselection_path, index_col=None, header=None)
-    preselections.columns = ['Type', 'Expression']
-    preselections.set_index('Type', inplace=True)
-    sim_ps = preselections.loc['simulation']['Expression']
-    real_ps = preselections.loc['actual']['Expression']
+    # Open the file with all the user requested features, some may be expressions
+    user_features = pd.read_csv(kwargs['request'], index_col=None, sep=',')
+    user_features['FeatureName'].fillna(user_features['Features'], inplace=True)
     
-# Define what features we will be requesting
-request_features = user_features['Request'].to_list()
-# Unpack any sub-lists inside this list
-single_features = [f for f in request_features if type(f) is not list]
-multi_features = [f for f in request_features if type(f) is list]
-multi_features_flattened = [item for sublist in multi_features for item in sublist]
-# Ensure no features are requested multiple times (remove repeats)
-request_features = list(dict.fromkeys(single_features + multi_features_flattened + ['Lb_M']))
-
-# Get the features for the simulated data
-sim_request_features = list(dict.fromkeys(request_features + ['Lb_BKGCAT']))
-if preselection:
-    # Make the pre-selection expression maleable to eval() and get features needed
-    # to perform the pre-selection
-    sim_eval_ps, sim_ps_fts = add_df_prefix(sim_ps, 'sdf')
-    sim_request_features = list(dict.fromkeys(sim_request_features + sim_ps_fts))
-
-with up.open(simulation_path + decay_tree_name) as f:
-    # Call in all of these data
-    sdf = f.arrays(["eventNumber"] + sim_request_features, library='pd')
-    sdf.set_index("eventNumber", inplace=True)
-    # Randomly shuffle the rows around
-    sdf = sdf.sample(frac=1, random_state=random_seed)
-    # Remove duplicate events
-    sdf = sdf[~sdf.index.duplicated(keep='first')]
-
-if preselection:
-    print(f"Evaluating pre-selection for simulated data\nCurrently there are {len(sdf)} events")
-    # Evaluate the pre-selection to remove events
-    sdf = sdf[eval(sim_eval_ps)]
-    print(f"Preselection applied without error\nNow there are {len(sdf)} events\n")
+    # Find all the features that are custom expressions
+    user_features['IsCustom'] = [' ' in f for f in user_features['Features']]
     
-# Add a category column and a column to track simulated events
-sdf['category'] = np.where(sdf['Lb_BKGCAT'].isin([10, 50]), 1, 0)
-sdf['IsSimulated'] = True
-
-# Get the features for the real data
-real_request_features = request_features
-if preselection:
-    # Make the pre-selection expression maleable to eval() and get features needed
-    # to perform the pre-selection
-    real_eval_ps, real_ps_fts = add_df_prefix(real_ps, 'rdf')
-    real_request_features = list(dict.fromkeys(real_request_features + real_ps_fts))
+    # Find all the features we need to request as custom expressions may contain multiple
+    user_features['Request'] = [add_df_prefix(f, 'df')[1] for f in user_features['Features']]
     
-with up.open(actual_path + decay_tree_name) as f:
-    # Call in all of these data
-    rdf = f.arrays(["eventNumber"] + real_request_features, library='pd')
-    rdf.set_index("eventNumber", inplace=True)
-    # Randomly shuffle the rows around
-    rdf = rdf.sample(frac=1, random_state=random_seed)
-    # Remove duplicate events
-    rdf = rdf[~rdf.index.duplicated(keep='first')]
-
-if restrict_mass_sidebands != None:
-    rdf = rdf[np.logical_or(rdf['Lb_M'] < restrict_mass_sidebands[0][1], rdf['Lb_M'] > restrict_mass_sidebands[1][0])]
-    rdf = rdf[np.logical_or(rdf['Lb_M'] > restrict_mass_sidebands[0][0], rdf['Lb_M'] < restrict_mass_sidebands[1][1])]
-
-if preselection:
-    print(f"Evaluating pre-selection for real data\nCurrently there are {len(rdf)} events")
-    # Evaluate the pre-selection to remove events
-    rdf = rdf[eval(real_eval_ps)]     
-    print(f"Preselection applied without error\nNow there are {len(rdf)} events\n")
+    # If applying preselection get the preselections from the text file
+    if kwargs['preselect']: 
+        preselections = pd.read_csv(kwargs['preselect_path'], index_col=None, header=None)
+        preselections.columns = ['Type', 'Expression']
+        preselections.set_index('Type', inplace=True)
+        sim_ps = preselections.loc['simulation']['Expression']
+        real_ps = preselections.loc['actual']['Expression']
+        
+    # Define what features the user is requesting
+    request_features = user_features['Request'].to_list()
     
-rdf['IsSimulated'] = False
-rdf['category'] = 0 # For normalisation mode this is only true if sidebands are restricted!
-
-# Remove the extra column that is in the simulated dataframe
-sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
-
-# Evaluate the custom expressions
-for index, row in user_features.iterrows():
-    # Does this row contain a custom feature
-    if row['IsCustom']:
-        sdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'sdf')[0])
-        rdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'rdf')[0])
+    # Unpack any sub-lists inside this list
+    single_features = [f for f in request_features if type(f) is not list]
+    multi_features = [f for f in request_features if type(f) is list]
+    multi_features_flattened = [item for sublist in multi_features for item in sublist]
+    
+    # Ensure no features are requested multiple times (remove repeats)
+    request_features = list(dict.fromkeys(single_features + multi_features_flattened + ['Lb_M']))
+    
+    # Get the features for the simulated data
+    sim_request_features = list(dict.fromkeys(request_features + ['Lb_BKGCAT']))
+    if kwargs['preselect']:
+        # Make the pre-selection expression maleable to eval() and get features needed
+        # to perform the pre-selection
+        sim_eval_ps, sim_ps_fts = add_df_prefix(sim_ps, 'sdf')
+        sim_request_features = list(dict.fromkeys(sim_request_features + sim_ps_fts))
+    
+    sdf, rdf = pd.DataFrame(), pd.DataFrame()
+    
+    print(f"INFO: Reading in data from simulated tree")
+    with up.open(kwargs['sim_path'] + kwargs['decay_tree_name']) as f:
+        # Call in all of these data
+        sdf = f.arrays(["eventNumber"] + sim_request_features, library='pd')
+        sdf.set_index("eventNumber", inplace=True)
+        # Randomly shuffle the rows around
+        sdf = sdf.sample(frac=1, random_state=kwargs['random_seed'])
+        # Remove duplicate events
+        sdf = sdf[~sdf.index.duplicated(keep='first')]
+        
+    if kwargs['preselect']:
+        print(f"INFO: Evaluating pre-selection for simulated data\nINFO: Currently there are {len(sdf)} events")
+        # Evaluate the pre-selection to remove events
+        sdf = sdf[eval(sim_eval_ps)]
+        print(f"INFO: Preselection applied without error\nINFO: Currently there are {len(sdf)} events\n")
+        
+    # Add a category column and a column to track simulated events
+    sdf['category'] = np.where(sdf['Lb_BKGCAT'].isin([10, 50]), 1, 0)
+    sdf['IsSimulated'] = True
+    print("INFO: Simulated data manipulation complete")
+    
+    # Get the features for the real data
+    real_request_features = request_features
+    if kwargs['preselect']:
+        # Make the pre-selection expression maleable to eval() and get features needed
+        # to perform the pre-selection
+        real_eval_ps, real_ps_fts = add_df_prefix(real_ps, 'rdf')
+        real_request_features = list(dict.fromkeys(real_request_features + real_ps_fts))
+        
+    with up.open(kwargs['actual_path'] + kwargs['decay_tree_name']) as f:
+        # Call in all of these data
+        rdf = f.arrays(["eventNumber"] + real_request_features, library='pd')
+        # Set the event number as the indexer
+        rdf.set_index("eventNumber", inplace=True)
+        # Randomly shuffle the rows around
+        rdf = rdf.sample(frac=1, random_state=kwargs['random_seed'])
+        # Remove duplicate events
+        rdf = rdf[~rdf.index.duplicated(keep='first')]
+        
+    if kwargs['preselect']:
+        print(f"INFO: Evaluating pre-selection for real data\nINFO: Currently there are {len(rdf)} events")
+        # Evaluate the pre-selection to remove events
+        rdf = rdf[eval(real_eval_ps)]     
+        print(f"INFO: Preselection applied without error\nINFO: Currently there are {len(rdf)} events\n")
+        
+    # Add a category column and a column to track simulated events
+    rdf['IsSimulated'] = False
+    
+    if kwargs['isNormalisation']:
+        # For normalisation mode this is only true if sidebands are restricted!
+        rdf['category'] = np.where(rdf['Lb_M'].between(5200, 5800), 2, 0)
+        # Assign a category of '2' to events that are in the full normalisation
+        # sample and probably background but within the signal region
     else:
-        pass
+        rdf['category'] = 0
     
-# Join the dataframes together
-fts = list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))
-rdf, sdf = rdf[fts], sdf[fts]
-df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
-
-# Remove events with missing values
-print(f'INFO: {len(df)} events in combined data\nINFO: Removing events with NaN values')
-df.dropna(inplace=True, axis=0)
-print(f'INFo: NaN events removed\nINFO: {len(df)} events retained')
-
-# Randomly shuffle the new dataframe
-df = df.sample(frac=1, random_state=random_seed)
-
-# Only keep the features we needed to fulfill the users request
-#df = df[list(dict.fromkeys(request_features + ['category', 'Lb_M', 'IsSimulated']))]
+        # Restrict the mass sidebands
+    if type(kwargs['restrict_mass']) is tuple:
+        print(f"INFO: Restricting mass sidebands\nINFO: Currently there are {len(rdf)} events")
+        print(f"INFO: There are {np.count_nonzero(rdf['Lb_M'] < 4500)} events less than the lower mass threshold")
+        print(f"INFO: There are {np.count_nonzero(rdf['Lb_M'] > 6500)} events above the higher mass threshold")
+        print(f"INFO: There are {np.count_nonzero(np.logical_and((rdf['Lb_M'] > 5200).to_numpy(), (rdf['Lb_M'] < 5800)).to_numpy())} events between threshold values")
+        rdf = rdf[np.logical_or(rdf['Lb_M'].between(*kwargs['restrict_mass'][1]).to_numpy(), rdf['Lb_M'].between(*kwargs['restrict_mass'][0]).to_numpy())].copy()
+        # this is throwing away signal events you moron
+        print(f"INFO: Mass restriction complete\nINFO: Currently there are {len(rdf)} events")
     
-# Now we have made the custom features drop anything else not needed
-#df = df[list(dict.fromkeys(user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']))]
-
-# Apply an event ratio restriction
-if equalise_event_numbers:
-    nbg = df['category'].value_counts()[0]
-    nsg = df['category'].value_counts()[1]
-    print(f'INFO: Sample currently includes {nbg} background and {nsg} signal events')
-    n_to_remove = np.abs(nsg - nbg)
+    # Remove the extra column that is in the simulated dataframe
+    sdf.drop('Lb_BKGCAT', axis=1, inplace=True)
+        
+    # Evaluate the custom expressions
+    for index, row in user_features.iterrows():
+        # Does this row contain a custom feature
+        if row['IsCustom']:
+            sdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'sdf')[0])
+            rdf[row['FeatureName']] = eval(add_df_prefix(row['Features'], 'rdf')[0])
     
-    if nsg > nbg:
-        frac = n_to_remove / nsg
-        remove_idx = df.query('category == 1').sample(frac=frac, random_state=random_seed).index.to_list()
-        df.drop(remove_idx, axis=0, inplace=True)
-    elif nsg < nbg:
-        frac = n_to_remove / nbg
-        remove_idx = df.query('category == 0').sample(frac=frac, random_state=random_seed).index.to_list()
-        df.drop(remove_idx, axis=0, inplace=True)
-    else:
-        # They are already equal
-        pass
-    print(f'INFO: Sample now includes {df["category"].value_counts()[0]} and {df["category"].value_counts()[1]} signal events')
+    # Now each of the two dataframes has all the necessary features made in the dataframe
+    # we now want to restrict features to those requested plus a few useful others
+    # they could have different features due to preselection
+    restrict_features = user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']
+    sdf, rdf = sdf[restrict_features], rdf[restrict_features]
     
-# Reset the index as well
-df.reset_index(drop=True, inplace=True)
+    # Join the dataframes together
+    df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
+    
+    # Remove events with missing values
+    if kwargs['dropnan']:
+        print(f'INFO: {len(df)} events in combined data\nINFO: Removing events with NaN values')
+        print(f'INFO: Columns with NaN present:\n{df.isna().sum()}\n')
+        df.dropna(inplace=True, axis=0)
+        print(f'INFO: NaN events removed\nINFO: {len(df)} events retained')
+        
+    # Randomly shuffle the new dataframe
+    df = df.sample(frac=1, random_state=kwargs['random_seed'])
+        
+    # Apply an event ratio restriction
+    if kwargs['equalise_event_numbers']:
+        nbg = df['category'].value_counts()[0]
+        nsg = df['category'].value_counts()[1]
+        print(f'INFO: Sample currently includes {nbg} background and {nsg} signal events')
+    
+        # Need to remove this many events
+        n_to_remove = np.abs(nsg - nbg)
+        
+        if nsg > nbg:
+            # Too much signal!
+            frac = n_to_remove / nsg
+            remove_idx = df.query('category == 1').sample(frac=frac, random_state=kwargs['random_seed']).index.to_list()
+            df.drop(remove_idx, axis=0, inplace=True)
+        elif nsg < nbg:
+            # Too much background
+            frac = n_to_remove / nbg
+            remove_idx = df.query('category == 0').sample(frac=frac, random_state=kwargs['random_seed']).index.to_list()
+            df.drop(remove_idx, axis=0, inplace=True)
+        else:
+            # They are already equal
+            pass
+        print(f'INFO: Sample now includes {df["category"].value_counts()[0]} background and {df["category"].value_counts()[1]} signal events')
+    
+    # Reset the index as well
+    df.reset_index(drop=True, inplace=True)
+    
+    # Make a directory for all these data
+    if not os.path.isdir(f'data_files/{kwargs["ver"]}'):
+        os.mkdir(f'data_files/{kwargs["ver"]}')
+    df.to_csv(f'data_files/{kwargs["ver"]}/all.csv')
+    # Note that the 'all' data is not normalised!
+    
+    # Do the train/val/test split
+    train_and_test_idx = int(np.floor(len(df)*(kwargs['train_fraction'] + kwargs['test_fraction'])))
+    train_and_test = df[:train_and_test_idx]
+    validation = df[train_and_test_idx:]
 
-# Make a directory for all these data
-if not os.path.isdir(f'data_files/{version}'):
-    os.mkdir(f'data_files/{version}')
-df.to_csv(f'data_files/{version}/all.csv')
-# Note that the 'all' data is not normalised!
+    y = train_and_test['category']
+    # The binary labels (classification problem) are assigned as the y column
+    x = train_and_test.drop(['category'], axis=1)
+    # Remove the category column from the training inputs
+    
+    X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(kwargs['train_fraction']/(kwargs['train_fraction']+kwargs['test_fraction'])), test_size=1-(kwargs['train_fraction']/(kwargs['train_fraction']+kwargs['test_fraction'])), random_state=kwargs['random_seed'])
+    # Split the training and test data accordingly so that the input fractions are maintained relative
+    X_val, y_val = validation.drop(['category'], axis=1), validation['category']
+    
+    # Do the normalisation using sklearns transformer
+    cols_to_transform = X_train.columns.to_list()
+    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
+    # The columns to apply the transformer to 
+    
+    ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')
 
-# Do the train/val/test split
-train_and_test = df[:int(np.floor(len(df)*(train + val)))]
-val = df[int(np.floor(len(df)*(train + val))):]
+    ct.fit(X_train)
+    # Get the values for the normaliser from X_train
+    
+    X_trains = ct.transform(X_train)
+    X_vals = ct.transform(X_val)
+    X_tests = ct.transform(X_test)
+    # Transform the original dataframes to a new numpy copy
 
-y = train_and_test['category']
-# The binary labels (classification problem) are assigned as the y column
-x = train_and_test.drop(['category'], axis=1)
-# Remove the category column from the training inputs
+    X_train = pd.DataFrame(X_trains, index=X_train.index, columns=X_train.columns).fillna(0)
+    X_val = pd.DataFrame(X_vals, index=X_val.index, columns=X_val.columns).fillna(0)
+    X_test = pd.DataFrame(X_tests, index=X_test.index, columns=X_test.columns).fillna(0)
+    # In case you divide by a zero std. dev. fill the NaNs with zeros
+    
+    # Output all these files
+    train_df = X_train.copy()
+    train_df['category'] = y_train
+    val_df = X_val.copy()
+    val_df['category'] = y_val
+    test_df = X_test.copy()
+    test_df['category'] = y_test
 
-X_train, X_test, y_train, y_test = train_test_split(x, y, train_size=(train/(train+test)), test_size=1-(train/(train+test)), random_state=random_seed)
-# Split the training and test data accordingly so that the input fractions are maintained relative
-X_val, y_val = val.drop(['category'], axis=1), val['category']
+    train_df.to_csv(f'data_files/{kwargs["ver"]}/train.csv')
+    val_df.to_csv(f'data_files/{kwargs["ver"]}/val.csv')
+    test_df.to_csv(f'data_files/{kwargs["ver"]}/test.csv')
+    
+    # Output the metadata file as well
+    print(f'Output to CSV: data_files/{kwargs["ver"]}/all.csv\nGenerating metadata file...')
 
-# Do the normalisation using sklearns transformer
-cols_to_transform = X_train.columns.to_list()
-cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
-# The columns to apply the transformer to 
+    f = open(f'outputs/csv_metadata/{kwargs["ver"]}.txt', 'w')
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    today = date.today()
+    d1 = today.strftime("%d/%m/%Y")
+    f.write(f"Signal Events: {df['category'].value_counts()[1]}\n")
+    f.write(f"Background Events: {df['category'].value_counts()[0]}\n")
+    f.write(f"Version: {kwargs['ver']}\nCompile Date: {d1}\nCompile Time: {current_time}\nPreselection Applied: {kwargs['preselect']}\nNaN Dropped: {kwargs['dropnan']}\n")
+    f.write(f"Equal Event Ratio: {kwargs['equalise_event_numbers']}\nRestrict Masses: {kwargs['restrict_mass']}\nNormalisation Mode: {kwargs['isNormalisation']}\nFeatures Included:\n")
 
-ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')
+    for i, p in enumerate(user_features['Features'].to_list()):
+        string = f"{i}. {p}\n"
+        f.write(string)
+    f.close()
 
-ct.fit(X_train)
-# Get the values for the normaliser from X_train
-X_trains = ct.transform(X_train)
-X_vals = ct.transform(X_val)
-X_tests = ct.transform(X_test)
-
-X_train = pd.DataFrame(X_trains, index=X_train.index, columns=X_train.columns).fillna(0)
-X_val = pd.DataFrame(X_vals, index=X_val.index, columns=X_val.columns).fillna(0)
-X_test = pd.DataFrame(X_tests, index=X_test.index, columns=X_test.columns).fillna(0)
-# In case you divide by a zero std. dev. fill the NaNs with zeros
-
-# Output all these files
-train = X_train.copy()
-train['category'] = y_train
-val = X_val.copy()
-val['category'] = y_val
-test = X_test.copy()
-test['category'] = y_test
-
-train.to_csv(f'data_files/{version}/train.csv')
-val.to_csv(f'data_files/{version}/val.csv')
-test.to_csv(f'data_files/{version}/test.csv')
-
-# Output the metadata file as well
-print(f"Output to CSV: data_files/{version}/all.csv\nGenerating metadata file...")
-
-f = open(f'outputs/csv_metadata/{version}.txt', 'w')
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-today = date.today()
-d1 = today.strftime("%d/%m/%Y")
-f.write(f"Version: {version}\nCompile Date: {d1}\nCompile Time: {current_time}\nPreselection Applied: {preselection}\n")
-f.write(f"Equal Event Ratio: {equalise_event_numbers}\nFeatures Included:\n")
-
-for i, p in enumerate(user_features['Features'].to_list()):
-    string = f"{i}. {p}\n"
-    f.write(string)
-f.close()
-
-print(f"INFO: Metadata file generated at outputs/csv_metadata/{version}.txt'")
+    print(f"INFO: Metadata file generated at outputs/csv_metadata/{kwargs['ver']}.txt")
