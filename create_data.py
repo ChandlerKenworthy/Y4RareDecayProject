@@ -69,7 +69,7 @@ def create_csv(kwargs):
                    'IsCustom': True,
                    'Request': add_df_prefix(expression, 'df')[1]}
         user_features = user_features.append(add_row, ignore_index=True)
-        print(user_features)
+        #print(user_features)
     
     # If applying preselection get the preselections from the text file
     if kwargs['preselect']: 
@@ -244,7 +244,7 @@ def create_csv(kwargs):
     
     # Do the normalisation using sklearns transformer
     cols_to_transform = X_train.columns.to_list()
-    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
+    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category', 'QSQR']]
     # The columns to apply the transformer to 
     
     ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')
