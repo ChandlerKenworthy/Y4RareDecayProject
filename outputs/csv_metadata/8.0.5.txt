@@ -1,8 +1,13 @@
-Version: 0.0.2
-Compile Date: 14/03/2022
-Compile Time: 20:23:47
+Signal Events: 25970
+Background Events: 25970
+Version: 8.0.5
+Compile Date: 01/04/2022
+Compile Time: 11:11:24
 Preselection Applied: False
-Equal Event Ratio: False
+NaN Dropped: False
+Equal Event Ratio: True
+Restrict Masses: ([4500, 5200], [5800, 6500])
+Normalisation Mode: True
 Features Included:
 0. JPs_FD_ORIVX
 1. LStar_ORIVX_CHI2
@@ -27,3 +32,4 @@ Features Included:
 20. np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV )
 21. np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
 22. np.log(1-np.cos( Lb_DIRA_OWNPV ))
+23. (me**2+mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((me**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ )))

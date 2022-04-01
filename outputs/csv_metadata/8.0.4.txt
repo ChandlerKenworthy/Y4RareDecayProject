@@ -1,9 +1,9 @@
-Signal Events: 459
-Background Events: 1224
+Signal Events: 38057
+Background Events: 25970
 Version: 8.0.4
-Compile Date: 30/03/2022
-Compile Time: 15:31:20
-Preselection Applied: True
+Compile Date: 01/04/2022
+Compile Time: 11:15:59
+Preselection Applied: False
 NaN Dropped: False
 Equal Event Ratio: False
 Restrict Masses: ([4500, 5200], [5800, 6500])
@@ -32,3 +32,7 @@ Features Included:
 20. np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV )
 21. np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
 22. np.log(1-np.cos( Lb_DIRA_OWNPV ))
+<<<<<<< HEAD
+=======
+23. (me**2+mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((me**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ )))
+>>>>>>> search

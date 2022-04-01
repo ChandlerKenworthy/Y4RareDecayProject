@@ -59,6 +59,18 @@ def create_csv(kwargs):
     # Find all the features we need to request as custom expressions may contain multiple
     user_features['Request'] = [add_df_prefix(f, 'df')[1] for f in user_features['Features']]
     
+    mu = 105.6583745 # MeV
+    me = 0.5109989461 # MeV
+    
+    if kwargs['DileptonQ2']:
+        expression = "(me**2+mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((me**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ )))"
+        add_row = {'Features': expression,
+                   'FeatureName': 'QSQR',
+                   'IsCustom': True,
+                   'Request': add_df_prefix(expression, 'df')[1]}
+        user_features = user_features.append(add_row, ignore_index=True)
+        #print(user_features)
+    
     # If applying preselection get the preselections from the text file
     if kwargs['preselect']: 
         preselections = pd.read_csv(kwargs['preselect_path'], index_col=None, header=None)
@@ -232,7 +244,7 @@ def create_csv(kwargs):
     
     # Do the normalisation using sklearns transformer
     cols_to_transform = X_train.columns.to_list()
-    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category']]
+    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category', 'QSQR']]
     # The columns to apply the transformer to 
     
     ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')
