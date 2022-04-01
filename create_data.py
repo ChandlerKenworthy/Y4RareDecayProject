@@ -63,7 +63,10 @@ def create_csv(kwargs):
     me = 0.5109989461 # MeV
     
     if kwargs['DileptonQ2']:
-        expression = "(me**2+mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((me**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ )))"
+        expression = "np.sqrt((me**2+mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((me**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ ))))"
+        if kwargs['isNormalisation']:
+            # Di muon final state
+            expression = "np.sqrt((2*mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((mu**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ ))))"
         add_row = {'Features': expression,
                    'FeatureName': 'QSQR',
                    'IsCustom': True,
