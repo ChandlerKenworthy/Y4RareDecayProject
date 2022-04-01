@@ -18,7 +18,7 @@ L2_TRACK_CHI2NDOF,
 JPs_IP_TOPPV,
 LStar_IP_ORIVX,
 JPs_IP_ORIVX,
-np.log( Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO ),LN_SUM_CONEISO
+np.log( Lb_L1_cc_asy_PT_0_5ConeISO + Lb_L2_cc_asy_PT_0_5ConeISO + Lb_p_cc_asy_PT_0_5ConeISO + Lb_K_cc_asy_PT_0_5ConeISO ),LN_SUM_CONEISO
 np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV ),LN_SUM_IPCHI2
 np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P ))),LN_COS_THETA
 np.log(1-np.cos( Lb_DIRA_OWNPV )),LN_COS_LBDIRA
