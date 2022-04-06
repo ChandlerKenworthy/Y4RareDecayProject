@@ -1,8 +1,8 @@
 Signal Events: 18194
 Background Events: 31783
 Version: 9.0.1
-Compile Date: 25/03/2022
-Compile Time: 08:27:57
+Compile Date: 06/04/2022
+Compile Time: 08:58:03
 Preselection Applied: True
 NaN Dropped: False
 Equal Event Ratio: False
@@ -28,7 +28,8 @@ Features Included:
 16. JPs_IP_TOPPV
 17. LStar_IP_ORIVX
 18. JPs_IP_ORIVX
-19. np.log(np.abs( Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO ))
+19. np.log( Lb_L1_cc_asy_PT_0.5ConeISO + Lb_L2_cc_asy_PT_0.5ConeISO + Lb_p_cc_asy_PT_0.5ConeISO + Lb_K_cc_asy_PT_0.5ConeISO )
 20. np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV )
 21. np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
 22. np.log(1-np.cos( Lb_DIRA_OWNPV ))
+23. np.sqrt((me**2+mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((me**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ ))))
