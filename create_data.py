@@ -184,6 +184,8 @@ def create_csv(kwargs):
     # they could have different features due to preselection
     restrict_features = user_features['FeatureName'].to_list() + ['Lb_M', 'IsSimulated', 'category']
     sdf, rdf = sdf[restrict_features], rdf[restrict_features]
+    if kwargs['isNormalisation']:
+        sdf['category'] == np.where(np.logical_and(sdf['category']==1, sdf['QSQR'].between(3000,3178)),1,0)
     
     # Join the dataframes together
     df = pd.concat([sdf, rdf], ignore_index=True, sort=False, axis=0)
