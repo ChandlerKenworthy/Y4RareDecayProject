@@ -72,7 +72,6 @@ def create_csv(kwargs):
                    'IsCustom': True,
                    'Request': add_df_prefix(expression, 'df')[1]}
         user_features = user_features.append(add_row, ignore_index=True)
-        #print(user_features)
     
     # If applying preselection get the preselections from the text file
     if kwargs['preselect']: 
