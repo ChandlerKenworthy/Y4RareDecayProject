@@ -248,7 +248,7 @@ def create_csv(kwargs):
     
     # Do the normalisation using sklearns transformer
     cols_to_transform = X_train.columns.to_list()
-    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category', 'QSQR']]
+    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category', 'QSQR', 'Lb_M0123_Subst01_Kp~2piK', 'Lb_M0123_Subst0_p2pi']]
     # The columns to apply the transformer to 
     
     ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')

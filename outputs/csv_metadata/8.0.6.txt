@@ -1,0 +1,37 @@
+Signal Events: 38057
+Background Events: 26837
+Version: 8.0.6
+Compile Date: 29/04/2022
+Compile Time: 12:47:13
+Preselection Applied: False
+NaN Dropped: False
+Equal Event Ratio: False
+Restrict Masses: None
+Normalisation Mode: True
+Features Included:
+0. JPs_FD_ORIVX
+1. LStar_ORIVX_CHI2
+2. Lb_ENDVERTEX_CHI2
+3. np.log( Lb_IPCHI2_OWNPV )
+4. Lb_PT
+5. np.log( Lb_MINIPCHI2 )
+6. np.log( Lb_IP01 )
+7. np.log( Lb_IP23 )
+8. np.log( Lb_IP_OWNPV )
+9. p_TRACK_VeloCHI2NDOF
+10. Lb_TAUERR
+11. K_TRACK_VeloCHI2NDOF
+12. np.log( Lb_DTF_PV_chi2 )
+13. JPs_ORIVX_CHI2
+14. L1_TRACK_VeloCHI2NDOF
+15. L2_TRACK_CHI2NDOF
+16. JPs_IP_TOPPV
+17. LStar_IP_ORIVX
+18. JPs_IP_ORIVX
+19. np.log( Lb_L1_cc_asy_PT_0_5ConeISO + Lb_L2_cc_asy_PT_0_5ConeISO + Lb_p_cc_asy_PT_0_5ConeISO + Lb_K_cc_asy_PT_0_5ConeISO )
+20. np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV )
+21. np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P )))
+22. np.log(1-np.cos( Lb_DIRA_OWNPV ))
+23. Lb_M0123_Subst01_Kp~2piK
+24. Lb_M0123_Subst0_p2pi
+25. np.sqrt((2*mu**2)+2*(np.sqrt((mu**2)+np.power( L1_P ,2))*np.sqrt((mu**2)+np.power( L2_P ,2))-(( L1_PX * L2_PX )+( L1_PY * L2_PY )+( L1_PZ * L2_PZ ))))
