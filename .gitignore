@@ -2,6 +2,7 @@
 *.pb
 *.index
 *.data*
+*.pdf
 trial.json
 oracle.json
 tuner0.json
