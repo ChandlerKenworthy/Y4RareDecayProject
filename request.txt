@@ -22,5 +22,16 @@ np.log( Lb_L1_cc_asy_PT_0_5ConeISO + Lb_L2_cc_asy_PT_0_5ConeISO + Lb_p_cc_asy_PT
 np.log( L2_IPCHI2_OWNPV + L1_IPCHI2_OWNPV ),LN_SUM_IPCHI2
 np.log(1-np.cos(np.arcsin( Lb_PT / Lb_P ))),LN_COS_THETA
 np.log(1-np.cos( Lb_DIRA_OWNPV )),LN_COS_LBDIRA
+Lb_M01,
 Lb_M0123_Subst01_Kp~2piK,
 Lb_M0123_Subst0_p2pi,
+Lb_M01_Subst1_K2mu,
+Lb_M01_Subst1_K2pi,
+Lb_M01_Subst1_K2p,
+Lb_M01_Subst0_p2mu,
+Lb_M01_Subst0_p2K,
+Lb_M01_Subst0_p2pi,
+Lb_M01_Subst01_Kp~2pK,
+Lb_M01_Subst01_Kp~2piK,
+Lb_M01_Subst01_Kp~2ppi,
+Lb_M01_Subst01_Kp~2pipi,

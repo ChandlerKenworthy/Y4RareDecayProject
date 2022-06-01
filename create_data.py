@@ -48,6 +48,11 @@ def create_csv(kwargs):
     validation and test data samples. Also output an entire non-normalised
     version
     """
+    
+    special_masses = ['Lb_M01_Subst1_K2mu', 'Lb_M01_Subst1_K2pi', 'Lb_M01_Subst1_K2p', 'Lb_M01_Subst0_p2mu',
+                      'Lb_M01_Subst0_p2K', 'Lb_M01_Subst0_p2pi', 'Lb_M01_Subst01_Kp~2pK', 'Lb_M01_Subst01_Kp~2piK',
+                      'Lb_M01_Subst01_Kp~2ppi', 'Lb_M01_Subst01_Kp~2pipi', 'Lb_M0123_Subst0_p2pi', 'Lb_M0123_Subst01_Kp~2piK',
+                      'Lb_M01']
 
     # Open the file with all the user requested features, some may be expressions
     user_features = pd.read_csv(kwargs['request'], index_col=None, sep=',')
@@ -248,7 +253,7 @@ def create_csv(kwargs):
     
     # Do the normalisation using sklearns transformer
     cols_to_transform = X_train.columns.to_list()
-    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category', 'QSQR', 'Lb_M0123_Subst01_Kp~2piK', 'Lb_M0123_Subst0_p2pi']]
+    cols_to_transform = [i for i in cols_to_transform if i not in ['Lb_M', 'IsSimulated', 'category', 'QSQR', *special_masses]]
     # The columns to apply the transformer to 
     
     ct = ColumnTransformer([('normaliser', StandardScaler(), cols_to_transform)], remainder='passthrough')
